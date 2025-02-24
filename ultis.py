@@ -1,30 +1,26 @@
 import os
-from langchain.utilities import SQLDatabase
-from langchain.llms import OpenAI
-from langchain_experimental.sql import SQLDatabaseChain
-from sqlalchemy import create_engine
-import getpass  # Import getpass để sử dụng
-from langchain import hub
-from typing_extensions import Annotated
 import getpass
-import os
 import streamlit as st
+
+from sqlalchemy import create_engine
+from typing_extensions import Annotated
+
+from langchain import hub
+from langchain.llms import OpenAI
 from langchain.chat_models import init_chat_model
+from langchain_experimental.sql import SQLDatabaseChain
+# from langchain.utilities import SQLDatabase
+from langchain_community.utilities import SQLDatabase
 
 # Comment out the below to opt-out of using LangSmith in this notebook. Not required.
-
 os.environ["ANTHROPIC_API_KEY"] = st.secrets["ANTHROPIC_API_KEY"]
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-
 SUPABASE_URI = st.secrets["SUPABASE_URI"]
-
 os.environ["LANGSMITH_TRACING"] = st.secrets["LANGSMITH_TRACING"]
 os.environ["LANGSMITH_ENDPOINT"] = st.secrets["LANGSMITH_ENDPOINT"]
 os.environ["LANGSMITH_API_KEY"] = st.secrets["LANGSMITH_API_KEY"]
 os.environ["LANGSMITH_PROJECT"] = st.secrets["LANGSMITH_PROJECT"]
 os.environ["LANGCHAIN_ENDPOINT"] = st.secrets["LANGCHAIN_ENDPOINT"]
-
-from langchain_community.utilities import SQLDatabase
 
 DB_SCHEMA_DESCRIPTION = """
 Để hỗ trợ bạn trả lời các câu hỏi trên, tôi đã cung cấp cho bạn một số thông tin cần thiết:

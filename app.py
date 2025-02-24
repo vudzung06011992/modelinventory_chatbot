@@ -1,33 +1,36 @@
-import streamlit as st
 import os
+import time
+import json
+import copy
+import warnings
+from typing import TypedDict, Annotated, List
+
+import streamlit as st
+
 from ultis import *
-from langchain.chat_models import ChatOpenAI
+
+from langchain.chat_models import ChatOpenAI, init_chat_model
 from langchain.memory import ConversationBufferMemory
 from langchain.sql_database import SQLDatabase
-from typing import TypedDict, Annotated, List
-import copy
-query_prompt_template = hub.pull("langchain-ai/sql-query-system-prompt")
-from langchain_community.tools.sql_database.tool import QuerySQLDatabaseTool
-assert len(query_prompt_template.messages) == 1
-import time 
-import copy
-import json
-import warnings
-from langchain_core.prompts import PromptTemplate
-from langchain.chat_models import init_chat_model
+from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
 from langchain.schema import HumanMessage
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_community.tools.sql_database.tool import QuerySQLDatabaseTool
 from langgraph.prebuilt import create_react_agent
 
+# Load SQL query system prompt
+query_prompt_template = hub.pull("langchain-ai/sql-query-system-prompt")
+assert len(query_prompt_template.messages) == 1
 
 warnings.filterwarnings("ignore")
 
+# Cấu hình db
 db = SQLDatabase.from_uri(SUPABASE_URI)
-
 execute_query_tool = QuerySQLDatabaseTool(db=db)
+print("-----------------")
 print("kết nối db thành công")
+print(st.secrets["LANGSMITH_TRACING"])
+print("-----------------")
 # Cấu hình LLM
-
 claude = init_chat_model("claude-3-5-sonnet-20241022")
 openai = init_chat_model("gpt-4")
 
@@ -35,8 +38,6 @@ openai = init_chat_model("gpt-4")
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, k = 5)
 
 # Hàm truy vấn dữ liệu từ Supabase
-
-from ultis import FULL_DES_JSON, TERM_DES_JSON, DB_SCHEMA_DESCRIPTION   
 
 def clarify_question(query, chat_history, llm_model):
 
