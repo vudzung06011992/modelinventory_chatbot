@@ -6,7 +6,6 @@ from sqlalchemy import create_engine
 from typing_extensions import Annotated
 
 from langchain import hub
-from langchain.llms import OpenAI
 from langchain.chat_models import init_chat_model
 from langchain_experimental.sql import SQLDatabaseChain
 # from langchain.utilities import SQLDatabase
