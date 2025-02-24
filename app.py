@@ -9,7 +9,7 @@ import streamlit as st
 
 from ultis import *
 
-from langchain.chat_models import ChatOpenAI, init_chat_model
+# from langchain.chat_models import ChatOpenAI, init_chat_model
 from langchain.memory import ConversationBufferMemory
 from langchain.sql_database import SQLDatabase
 from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
