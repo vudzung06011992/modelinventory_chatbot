@@ -204,7 +204,7 @@ if st.button("Send"):
                 and db retrieval result, answer the user question.\n\n
                 Question: {}
 
-                SQL Result: {}
+                Result provided: {}
                 
                 Trình bày đẹp, bỏ các ký tự \n đi
                 """.format(state["question"], state["result"])
