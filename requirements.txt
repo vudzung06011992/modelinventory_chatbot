@@ -8,3 +8,4 @@ streamlit==1.42.2
 typing_extensions==4.12.2
 openai==1.63.2
 psycopg2-binary
+langchain_anthropic==0.3.7
