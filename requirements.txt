@@ -7,3 +7,4 @@ SQLAlchemy==2.0.25
 streamlit==1.42.2
 typing_extensions==4.12.2
 openai==1.63.2
+psycopg2==2.9.10
