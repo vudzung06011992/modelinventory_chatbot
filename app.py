@@ -26,24 +26,19 @@ warnings.filterwarnings("ignore")
 # Cấu hình db
 db = SQLDatabase.from_uri(SUPABASE_URI)
 execute_query_tool = QuerySQLDatabaseTool(db=db)
-print("-----------------")
 print("kết nối db thành công")
-print(st.secrets["LANGSMITH_TRACING"])
-print("-----------------")
+
 # Cấu hình LLM
 from langchain_community.chat_models import ChatOpenAI
-from langchain_community.chat_models import ChatAnthropic
-
 # claude = ChatAnthropic(model="claude-3-5-sonnet-20241022", temperature=0.7)
+# openai = init_chat_model("gpt-4")
 openai = ChatOpenAI(model_name="gpt-4")
 claude = init_chat_model("claude-3-5-sonnet-20241022")
-# openai = init_chat_model("gpt-4")
 
 # Tạo bộ nhớ hội thoại
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, k = 5)
 
 # Hàm truy vấn dữ liệu từ Supabase
-
 def clarify_question(query, chat_history, llm_model):
 
     def remove_curly_braces(text):
@@ -51,7 +46,7 @@ def clarify_question(query, chat_history, llm_model):
     
     context = "\n".join([f"Câu hỏi User: {chat['user']} ==> Bot hiểu yêu cầu như sau: {remove_curly_braces(chat['bot'])}" \
                          for chat in chat_history])
-    print("========== LỊCH SỬ CONTEXT: ========= \n", context)
+    print("== LỊCH SỬ CONTEXT: == \n", context)
     system = DB_SCHEMA_DESCRIPTION \
     + """You are a DB assistant. Dựa trên hội thoại trước: """ + context \
     + """Với câu hỏi hiện tại của User: {question}. """ \
@@ -75,14 +70,13 @@ def clarify_question(query, chat_history, llm_model):
 
 # Giao diện Streamlit
 st.title("Model-Inventory AI Chatbot")
-st.write("Nhập câu hỏi về dữ liệu trong Supabase Database:")
 
 # Lưu hội thoại trong session
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
 # Nhập câu hỏi từ người dùng
-user_input = st.text_input("Câu hỏi của bạn?")
+user_input = st.text_input("Tôi có thể giúp gì cho bạn :")
 
 if st.button("Send"):
     if user_input:
@@ -93,7 +87,7 @@ if st.button("Send"):
         ################ I. Thực thi query SQL từ AI với ngữ cảnh hội thoại ################
         result_1 = clarify_question(user_input, st.session_state.chat_history, claude)
         print("****** Result_1: ", result_1)
-        st.write("****** Câu hỏi được làm rõ ******: ", result_1)
+        st.write("**Câu hỏi của người dùng**: ", result_1)
 
         # tách thông tin từ kết quả trả về
         result_1 = json.loads(result_1)
@@ -174,7 +168,7 @@ if st.button("Send"):
                 tools= """["QuerySQLDatabaseTool", "InfoSQLDatabaseTool", "ListSQLDatabaseTool", "QuerySQLCheckerTool"]"""
             )
 
-            # 🛠 Tạo Agent Executor (Dùng Prompt ĐÃ FORMAT)
+            # Tạo Agent Executor (Dùng Prompt ĐÃ FORMAT)
             agent_executor = create_react_agent(llm_model, tools, prompt=formatted_prompt)
             answer = agent_executor.invoke({"messages": [{"role": "user", "content": info_dict["question"]}]})
 
@@ -189,7 +183,7 @@ if st.button("Send"):
         
         result_3 = write_query(claude, info_dict)
         print("******Câu lệnh là :******", result_3["query"])
-        st.write("******Câu lệnh là: ******", result_3["query"])
+        st.write("**Câu lệnh truy vấn dữ liệu: **", result_3["query"])
 
         # IV. Thực thi câu lệnh query
         
@@ -199,7 +193,7 @@ if st.button("Send"):
             return {"result": execute_query_tool.invoke(state["query"])}
 
         result_4 = execute_query(result_3)
-        st.write("Kết quả thực thi câu lệnh : ", result_4["result"])
+        st.write("**Kết quả truy vấn: **", result_4["result"])
 
         # V. Trả lời
         def generate_answer(state, model):
@@ -219,15 +213,15 @@ if st.button("Send"):
             return response.content
         
         result_5 = generate_answer({"question":clarified_question, "result": result_4 }, openai)
-        st.write("******Kết quả trả lời : ******", result_5)
+        st.write("**Phản hồi của Chatbot: **", result_5)
 
     # VI. Hiển thị:
     def remove_newlines(text):
         return text.replace("\n", "")
 
-    response_text = "1. Câu hỏi làm rõ: " + clarified_question +  "----" +  "\n 2. Câu lệnh query: " + result_3["query"] +  "----" +  "\n 3. Kết quả:  " + str(result_5)
+    # response_text = "1. Câu hỏi làm rõ: " + clarified_question +  "----" +  "\n 2. Câu lệnh query: " + result_3["query"] +  "----" +  "\n 3. Kết quả:  " + str(result_5)
     # response_text = remove_newlines(response_text)
-    st.write(response_text, "\n 4. Thời gian thực thi: ", time.time() - start_time)
+    st.write("\n Thời gian thực thi: ", time.time() - start_time)
     
     def summarize_query(db_query, model):
         """mô tả các điều kiện where trong câu lệnh"""
@@ -243,10 +237,11 @@ if st.button("Send"):
  
     summarized_where_query = summarize_query(result_3["query"], openai)
     st.session_state.chat_history.append({"user": user_input, \
-                                                                "bot": clarified_question + ". Từ đó, Cách Bot thực hiện là : " + str(summarized_where_query)})
+                                                                "bot": "Phản hồi của Chatbot: " + str(summarized_where_query)})
 
 # Hiển thị lịch sử hội thoại
 st.subheader(" Lịch sử hội thoại ")
-for chat in st.session_state.chat_history:
-    st.write(f"**Bạn:** {chat['user']}")
-    st.write(f"**Bot:** {chat['bot']}")
+for chat in reversed(st.session_state.chat_history):  
+    st.write(f"**Người dùng:** {chat['user']}")
+    st.write(f"**Chatbot:** {chat['bot']}")
+    st.write(f"**---------**")
