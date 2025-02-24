@@ -183,7 +183,7 @@ if st.button("Send"):
         
         result_3 = write_query(claude, info_dict)
         print("******Câu lệnh là :******", result_3["query"])
-        st.write("**Câu lệnh truy vấn dữ liệu: **", result_3["query"])
+        st.write("**Câu lệnh truy vấn dữ liệu**: ", result_3["query"])
 
         # IV. Thực thi câu lệnh query
         
@@ -193,7 +193,7 @@ if st.button("Send"):
             return {"result": execute_query_tool.invoke(state["query"])}
 
         result_4 = execute_query(result_3)
-        st.write("**Kết quả truy vấn: **", result_4["result"])
+        st.write("**Kết quả truy vấn**: ", result_4["result"])
 
         # V. Trả lời
         def generate_answer(state, model):
@@ -213,7 +213,7 @@ if st.button("Send"):
             return response.content
         
         result_5 = generate_answer({"question":clarified_question, "result": result_4 }, openai)
-        st.write("**Phản hồi của Chatbot: **", result_5)
+        st.write("**Phản hồi của Chatbot**: ", result_5)
 
     # VI. Hiển thị:
     def remove_newlines(text):
