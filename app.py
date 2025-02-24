@@ -31,8 +31,13 @@ print("kết nối db thành công")
 print(st.secrets["LANGSMITH_TRACING"])
 print("-----------------")
 # Cấu hình LLM
-claude = init_chat_model("claude-3-5-sonnet-20241022")
-openai = init_chat_model("gpt-4")
+from langchain_community.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatAnthropic
+
+claude = ChatAnthropic(model="claude-3-5-sonnet-20241022", temperature=0.7)
+openai = ChatOpenAI(model_name="gpt-4")
+# claude = init_chat_model("claude-3-5-sonnet-20241022")
+# openai = init_chat_model("gpt-4")
 
 # Tạo bộ nhớ hội thoại
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, k = 5)
