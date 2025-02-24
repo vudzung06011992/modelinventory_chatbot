@@ -14,6 +14,12 @@ import copy
 import json
 import warnings
 from langchain_core.prompts import PromptTemplate
+from langchain.chat_models import init_chat_model
+from langchain.schema import HumanMessage
+from langchain_core.prompts import ChatPromptTemplate
+from langgraph.prebuilt import create_react_agent
+
+
 warnings.filterwarnings("ignore")
 
 db = SQLDatabase.from_uri(SUPABASE_URI)
@@ -21,7 +27,7 @@ db = SQLDatabase.from_uri(SUPABASE_URI)
 execute_query_tool = QuerySQLDatabaseTool(db=db)
 print("kết nối db thành công")
 # Cấu hình LLM
-from langchain.chat_models import init_chat_model
+
 claude = init_chat_model("claude-3-5-sonnet-20241022")
 openai = init_chat_model("gpt-4")
 
@@ -29,8 +35,7 @@ openai = init_chat_model("gpt-4")
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, k = 5)
 
 # Hàm truy vấn dữ liệu từ Supabase
-from langchain.schema import HumanMessage
-from langchain_core.prompts import ChatPromptTemplate
+
 from ultis import FULL_DES_JSON, TERM_DES_JSON, DB_SCHEMA_DESCRIPTION   
 
 def clarify_question(query, chat_history, llm_model):
