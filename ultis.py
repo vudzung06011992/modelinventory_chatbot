@@ -110,7 +110,7 @@ FULL_DES_JSON ={
       "RiskType_lv1": "Phân loại model theo loại rủi ro cấp 1, bao gồm các nhóm như RRTD (rủi ro tín dụng), RRTT (rủi ro thị trường), RRHĐ (rủi ro hoạt động)",
       "RiskType_lv2": "Phân loại model theo loại rủi ro cấp 2, dựa theo RiskType_lv1 nhưng chi tiết hơn, ví dụ: RRTD bán buôn, RRTD bán lẻ, RRLSTSNH, RRTT, RRTD đối tác.",
       "RiskParameter": "Phân loại model theo tham số rủi ro ví dụ: PD, Supervisory slot, LGD, EAD, XHTD CR, EWS, BEEL, Hành vi tiền gửi KKH, Hành vi tiền vay, Hành vi tiền gửi có kì hạn, Định giá, Value-at-Risk, Add on, Stress test, Khác.",
-      "ModelSegmentation": "Phân khúc mô hình hướng tới."
+      "ModelSegmentation": "Phân khúc mô hình hướng tới, ví dụ như: Cho vay cá nhân sản xuất kinh doanh, Cho vay bất động sản, Cho vay khác, Cho vay từng lần, Thẻ tín dụng, ..."
     }
   },
   "GSTD_Model Development": {
@@ -231,8 +231,8 @@ Thuật ngữ:
         -	KHDN: Nhóm phân khúc khách hàng doanh nhiệp (hay được gọi là bán buôn), RiskType_lv2 = RRTD bán buôn
         -	KHCN: Nhóm phân khúc khách hàng cá nhân (cũng hay được gọi là bán lẻ) , RiskType_lv2 = RRTD bán lẻ
         -	QLRRTH: tên phòng Quản lý rủi ro tích hợp
-        -	Về phân khúc các sản phẩm:
-        o	Re đại diện cho vay bất động sản
+        -	Các thuật ngữ viết tắt bạn cần nắm được:
+        o	RES đại diện cho vay bất động sản 
         o	IBIZ đại diện cho vay sản xuất kinh doanh (SXKD)
         o	CONS hoặc CSE: cho vay tiêu dùng có TSBĐ
         o	UNSEC hoặc CUS cho vay tiêu dùng không có TSBĐ
