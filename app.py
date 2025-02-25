@@ -125,8 +125,9 @@ if st.button("Send"):
         tools = toolkit.get_tools()
 
         from langgraph.prebuilt import create_react_agent
+        info_dict["error"] = None
 
-        def write_query(llm_model, info_dict):
+        def write_query(llm_model, info_dict, error=None):
 
             prompt = PromptTemplate.from_template(
                 (TERM_DES_JSON + """
@@ -136,15 +137,15 @@ if st.button("Send"):
 
                     Lưu ý:
                     - TÊN CÁC BẢNG, CỘT PHẢI ĐỂ TRONG ""
-                    - Việc mapping các bảng dựa trên trường DevelopmentID. Trường DevelopmenID không phải là ModelID. Không được dùng DevelopmenID = ModelID
-                    - Câu lệnh phải tuân thủ nguyên tắc của {dialect} trong Supabase.
+                    - Việc mapping các bảng dựa trên DevelopmentID. Trường DevelopmenID không phải là ModelID. Không được dùng DevelopmenID = ModelID
+                    - Câu lệnh phải tuân thủ nguyên tắc {dialect} trong Supabase.
                     - Các TRƯỜNG DATE (tên trường có chữ date) phải được chuyển đổi về int với giá trị không null, rồi mới sử dụng. Lưu ý: các trường này có thể tồn tại giá trị NULL hoặc missing.
                     - Bạn phải rà soát câu hỏi người dùng để đảm bảo câu lệnh trả về kết quả chính xác.
                     - Đừng tự thêm điều kiện where mà người dùng không cần
                     - Không thêm ký tự \n, \ không cần thiết.
-
+                    - {previous_error}
                     Bạn chỉ được trả ra câu lệnh query (không thêm bất kỳ thông tin nào khác) mà phải chạy được. Only return the Query, no explanation, no description.
-
+                    
                     Use the following format:
                     Question: the input question you must answer
                     Thought: you should always think about what to do
@@ -154,7 +155,7 @@ if st.button("Send"):
                     ... (this Thought/Action/Action Input/Observation can repeat N times)
                     Thought: I now know the final answer
                     Final Answer: the final answer to the original input question
-
+                    
                     Begin!
                     Question: {question}
                 """)
@@ -165,6 +166,7 @@ if st.button("Send"):
                 dialect="PostgreSQL",
                 question=info_dict["question"],
                 input=info_dict["input"],
+                previous_error = info_dict["previous_error"]
                 tools= """["QuerySQLDatabaseTool", "InfoSQLDatabaseTool", "ListSQLDatabaseTool", "QuerySQLCheckerTool"]"""
             )
 
@@ -181,18 +183,39 @@ if st.button("Send"):
 
             return {"query": extract_sql_from_final_answer(answer["messages"][1].content)}
         
-        result_3 = write_query(claude, info_dict)
-        print("******Câu lệnh là :******", result_3["query"])
-        st.write("**Câu lệnh truy vấn dữ liệu**: ", result_3["query"])
-
-        # IV. Thực thi câu lệnh query
-        
         def execute_query(state):
             """Execute SQL query."""
             
             return {"result": execute_query_tool.invoke(state["query"])}
 
-        result_4 = execute_query(result_3)
+        # Tạo query và execute
+        attempt = 1
+        error_message = None
+        max_attempts = 3
+        info_dict"previous_error"] = ""
+
+        while attempt <= max_attempts:
+            try:
+                # Generate query
+                result_3 = write_query(claude, info_dict)                
+                # Execute query
+                result_4 = execute_query(result_3)
+
+            except Exception as e:
+                error_message = str(e)
+                print(f"QUERY ERROR (attempt {attempt}): Query {result_3["query"]} xuất hiện lỗi: {error_message}")
+                st.write(f"QUERY ERROR (attempt {attempt}): Query {result_3["query"]} xuất hiện lỗi: {error_message}")
+                
+                # Update info_dict with error information for better context
+                info_dict"previous_error"] = "Hãy phân tích để phát hiện lỗi và tránh lỗi câu truy vấn sau: " + error_message + ". Câu truy vấn này đã gặp lỗi: " + error_message
+                attempt += 1
+        
+        # If we've exhausted all attempts
+        st.error(f"Không thể tạo câu truy vấn hợp lệ sau {max_attempts} lần thử. Lỗi cuối cùng: {error_message}")
+        
+        ################
+        print("******Câu lệnh là :******", result_3["query"])
+        st.write("**Câu lệnh truy vấn dữ liệu**: ", result_3["query"])
         st.write("**Kết quả truy vấn**: ", result_4["result"])
 
         # V. Trả lời
