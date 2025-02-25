@@ -191,7 +191,7 @@ if st.button("Send"):
         # Tạo query và execute
         attempt = 1
         error_message = None
-        max_attempts = 3
+        max_attempts = 2
         info_dict["previous_error"] = ""
 
         while attempt <= max_attempts:
@@ -200,6 +200,7 @@ if st.button("Send"):
                 result_3 = write_query(claude, info_dict)                
                 # Execute query
                 result_4 = execute_query(result_3)
+                break  # Nếu thành công, thoát khỏi vòng lặp
 
             except Exception as e:
                 error_message = str(e)
@@ -208,11 +209,14 @@ if st.button("Send"):
                 
                 # Update info_dict with error information for better context
                 info_dict["previous_error"] = "Hãy phân tích để phát hiện lỗi và tránh lỗi câu truy vấn sau: " + error_message + ". Câu truy vấn này đã gặp lỗi: " + error_message
+                if attempt == max_attempts:
+                    st.error(f"Không thể tạo câu truy vấn hợp lệ sau {max_attempts} lần thử. Lỗi cuối cùng: {error_message}")
+                    break  # Dừng vòng lặp ngay
+
                 attempt += 1
-        
         # If we've exhausted all attempts
-        st.error(f"Không thể tạo câu truy vấn hợp lệ sau {max_attempts} lần thử. Lỗi cuối cùng: {error_message}")
         
+
         ################
         print("******Câu lệnh là :******", result_3["query"])
         st.write("**Câu lệnh truy vấn dữ liệu**: ", result_3["query"])
