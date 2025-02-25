@@ -192,7 +192,7 @@ if st.button("Send"):
         attempt = 1
         error_message = None
         max_attempts = 3
-        info_dict"previous_error"] = ""
+        info_dict["previous_error"] = ""
 
         while attempt <= max_attempts:
             try:
@@ -207,7 +207,7 @@ if st.button("Send"):
                 st.write(f"QUERY ERROR (attempt {attempt}): Query {result_3["query"]} xuất hiện lỗi: {error_message}")
                 
                 # Update info_dict with error information for better context
-                info_dict"previous_error"] = "Hãy phân tích để phát hiện lỗi và tránh lỗi câu truy vấn sau: " + error_message + ". Câu truy vấn này đã gặp lỗi: " + error_message
+                info_dict["previous_error"] = "Hãy phân tích để phát hiện lỗi và tránh lỗi câu truy vấn sau: " + error_message + ". Câu truy vấn này đã gặp lỗi: " + error_message
                 attempt += 1
         
         # If we've exhausted all attempts
