@@ -144,6 +144,7 @@ if st.button("Send"):
                     - Đừng tự thêm điều kiện where mà người dùng không cần
                     - Không thêm ký tự \n, \ không cần thiết.
                     - {previous_error}
+                    
                     Bạn chỉ được trả ra câu lệnh query (không thêm bất kỳ thông tin nào khác) mà phải chạy được. Only return the Query, no explanation, no description.
                     
                     Use the following format:
