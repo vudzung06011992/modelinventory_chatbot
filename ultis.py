@@ -110,7 +110,69 @@ FULL_DES_JSON ={
       "RiskType_lv1": "Phân loại model theo loại rủi ro cấp 1, bao gồm các nhóm như RRTD (rủi ro tín dụng), RRTT (rủi ro thị trường), RRHĐ (rủi ro hoạt động)",
       "RiskType_lv2": "Phân loại model theo loại rủi ro cấp 2, dựa theo RiskType_lv1 nhưng chi tiết hơn, ví dụ: RRTD bán buôn, RRTD bán lẻ, RRLSTSNH, RRTT, RRTD đối tác.",
       "RiskParameter": "Phân loại model theo tham số rủi ro ví dụ: PD, Supervisory slot, LGD, EAD, XHTD CR, EWS, BEEL, Hành vi tiền gửi KKH, Hành vi tiền vay, Hành vi tiền gửi có kì hạn, Định giá, Value-at-Risk, Add on, Stress test, Khác.",
-      "ModelSegmentation": "Phân khúc mô hình hướng tới, ví dụ như: Cho vay cá nhân sản xuất kinh doanh, Cho vay bất động sản, Cho vay khác, Cho vay từng lần, Thẻ tín dụng, .... Lưu ý cột này có các giá trị không viết tắt như RES, IBIZ, CC, ... mà đã được diễn giải đầy đủ"}
+      "ModelSegmentation": """Phân khúc mô hình hướng tới, ví dụ như: Cho vay cá nhân sản xuất kinh doanh, Cho vay bất động sản, Cho vay khác, Cho vay từng lần, Thẻ tín dụng, .... Lưu ý cột này có các giá trị không viết tắt như RES, IBIZ, CC, ... mà đã được diễn giải đầy đủ. Các giá trị cụ thể bao gồm:
+          -Doanh nghiệp lớn
+          -Doanh nghiệp trung bình
+          -Doanh nghiệp FDI
+          -Doanh nghiệp mới thành lập
+          -Ngân hàng nội địa
+          -Cấp tín dụng tài trợ dự án
+          -KHDN
+          -Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng
+          -Cho vay tuần hoàn trong hiệu lực giải ngân
+          -TTTM tuần hoàn trong hiệu lực giải ngân
+          -Thẻ tín dụng trong hiệu lực giải ngân
+          -Cho vay tuần hoàn hết hiệu lực giải ngân + Cho vay không tuần hoàn hết hiệu lực giải ngân + Cho vay không tuần hoàn không còn hạn mức tín dụng chưa sử dụng
+          -FDI thông thường
+          -FDI tiềm năng
+          -Doanh nghiệp thông thường theo CR
+          -Doanh nghiệp siêu nhỏ theo CR
+          -Doanh nghiệp mới thành lập theo CR
+          -Doanh nghiệp không xếp hạng
+          -Cho vay + Tài trợ thương mại KHDN
+          -Doanh nghiệp Bán lẻ vừa và nhỏ (chỉ bao gồm các khách hàng thuộc quản lý trên Sổ bán buôn)
+          -Doanh nghiệp không có xếp hạng theo PD
+          -Doanh nghiệp Bán lẻ vừa và nhỏ
+          -Cấp tín dụng tài trợ dự án (PF)
+          -Cho vay chuyên biệt khác Tài trợ dự án
+          -Cho vay tuần hoàn trong hiệu lực giải ngân KHDN
+          -Thẻ tín dụng KHDN
+          -TTTM tuần hoàn trong hiệu lực giải ngân KHDN
+          -Cho vay không tuần hoàn trong hiệu lực giải ngân KHDN
+          -Ngân hàng nước ngoài
+          -Tổ chức tín dụng phi ngân hàng
+          -Định chế tài chính phi tín dụng
+          -Định chế tài chính phi tín dụng - Cho vay không tuần hoàn/ tuần hoàn hết hiệu lực giải ngân
+          -Định chế tài chính phi tín dụng - Thẻ tín dụng
+          -Định chế tài chính phi tín dụng - Cho vay tuần hoàn trong hiệu lực giải ngân
+          -Định chế tài chính phi tín dụng - TTTM tuần hoàn/ tuần trong hiệu lực giải ngân
+          -Cho vay Cá nhân sản xuất kinh doanh
+          -Cho vay bất động sản
+          -Cho vay tiêu dùng có TSBĐ
+          -Cho vay tiêu dùng không có TSBĐ
+          -Thẻ tín dụng
+          -Cho vay mua ô tô/ xe máy để tiêu dùng
+          -Cá nhân, Tổ chức kinh tế
+          -FX
+          -GTCG
+          -IRS
+          -CCS
+          -SKD
+          -Gold
+          -Cho vay từng lần
+          -Cho vay hạn mức
+          -Cho vay khác
+          -Cho vay tiêu dùng có tài sản bảo đảm
+          -Cho vay tiêu dùng không có tài sản bảo đảm
+          -Cho vay mua ô tô
+          -Các khoản vay không được xếp hạng
+          -Cho vay tuần hoàn, thẻ tín dụng và sản phẩm thấu chi, tài trợ thương mại
+          -Khoản vay đã vỡ nợ phân khúc KHCN
+          -Khách hàng bán buôn
+          -Doanh nghiệp Bán lẻ vừa và nhỏ (chỉ bao gồm các khách hàng thuộc quản lý trên Sổ bán lẻ)
+          -Deposit Loan Repo
+          -Mô hình sử dụng dữ liệu thay thế 
+          -Khách hàng Bán lẻ"""}
   },
   "GSTD_Model Development": {
     "description": "GSTD_Model Development lưu trữ thông tin về quá trình phát triển, xây dựng mô hình.",
