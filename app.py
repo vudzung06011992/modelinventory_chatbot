@@ -143,6 +143,7 @@ if st.button("Send"):
                     - Bạn phải rà soát câu hỏi người dùng để đảm bảo câu lệnh trả về kết quả chính xác.
                     - Đừng tự thêm điều kiện where mà người dùng không cần
                     - Không thêm ký tự \n, \ không cần thiết.
+                    - Các trường text, thực hiện lấy giá trị lowcase để thực hiện điều kiện lọc.
                     - {previous_error}
                     
                     Bạn chỉ được trả ra câu lệnh query (không thêm bất kỳ thông tin nào khác) mà phải chạy được. Only return the Query, no explanation, no description.
