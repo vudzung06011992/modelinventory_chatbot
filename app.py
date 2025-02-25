@@ -166,7 +166,7 @@ if st.button("Send"):
                 dialect="PostgreSQL",
                 question=info_dict["question"],
                 input=info_dict["input"],
-                previous_error = info_dict["previous_error"]
+                previous_error = info_dict["previous_error"],
                 tools= """["QuerySQLDatabaseTool", "InfoSQLDatabaseTool", "ListSQLDatabaseTool", "QuerySQLCheckerTool"]"""
             )
 
