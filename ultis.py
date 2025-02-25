@@ -110,8 +110,7 @@ FULL_DES_JSON ={
       "RiskType_lv1": "Phân loại model theo loại rủi ro cấp 1, bao gồm các nhóm như RRTD (rủi ro tín dụng), RRTT (rủi ro thị trường), RRHĐ (rủi ro hoạt động)",
       "RiskType_lv2": "Phân loại model theo loại rủi ro cấp 2, dựa theo RiskType_lv1 nhưng chi tiết hơn, ví dụ: RRTD bán buôn, RRTD bán lẻ, RRLSTSNH, RRTT, RRTD đối tác.",
       "RiskParameter": "Phân loại model theo tham số rủi ro ví dụ: PD, Supervisory slot, LGD, EAD, XHTD CR, EWS, BEEL, Hành vi tiền gửi KKH, Hành vi tiền vay, Hành vi tiền gửi có kì hạn, Định giá, Value-at-Risk, Add on, Stress test, Khác.",
-      "ModelSegmentation": "Phân khúc mô hình hướng tới, ví dụ như: Cho vay cá nhân sản xuất kinh doanh, Cho vay bất động sản, Cho vay khác, Cho vay từng lần, Thẻ tín dụng, .... Lưu ý cột này có các giá trị không viết tắt như RES, IBIZ, CC, ... mà đã được diễn giải đầy đủ". 
-    }
+      "ModelSegmentation": "Phân khúc mô hình hướng tới, ví dụ như: Cho vay cá nhân sản xuất kinh doanh, Cho vay bất động sản, Cho vay khác, Cho vay từng lần, Thẻ tín dụng, .... Lưu ý cột này có các giá trị không viết tắt như RES, IBIZ, CC, ... mà đã được diễn giải đầy đủ"}
   },
   "GSTD_Model Development": {
     "description": "GSTD_Model Development lưu trữ thông tin về quá trình phát triển, xây dựng mô hình.",
