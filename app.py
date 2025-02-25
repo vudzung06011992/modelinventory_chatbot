@@ -80,14 +80,14 @@ user_input = st.text_input("Tôi có thể giúp gì cho bạn :")
 
 if st.button("Send"):
     if user_input:
+        print("===============BẮT ĐẦU===============")
         start_time = time.time()
         # Lưu câu hỏi vào bộ nhớ
         memory.save_context({"input": user_input}, {"output": ""})
 
         ################ I. Thực thi query SQL từ AI với ngữ cảnh hội thoại ################
         result_1 = clarify_question(user_input, st.session_state.chat_history, claude)
-        print("****** Result_1: ", result_1)
-        st.write("**Câu hỏi của người dùng**: ", result_1)
+        print("-------------------------Kết quả bước 1: -------------------------\n", result_1)
 
         # tách thông tin từ kết quả trả về
         result_1 = json.loads(result_1)
@@ -179,6 +179,8 @@ if st.button("Send"):
                 keyword = "Final Answer:"
                 if keyword in text:
                     return text.split(keyword, 1)[1].strip()
+                if "Action Input: " in text:   
+                    return text.split(keyword, 1)[1].strip()
                 return text
 
             return {"query": extract_sql_from_final_answer(answer["messages"][1].content)}
@@ -204,7 +206,7 @@ if st.button("Send"):
 
             except Exception as e:
                 error_message = str(e)
-                print(f"QUERY ERROR (attempt {attempt}): Query {result_3['query']} xuất hiện lỗi: {error_message}")
+                print(f"******QUERY ERROR (attempt {attempt}): Query {result_3['query']} xuất hiện lỗi: {error_message}")
                 st.write(f"QUERY ERROR (attempt {attempt}): Query {result_3['query']} xuất hiện lỗi: {error_message}")
                 
                 # Update info_dict with error information for better context
@@ -218,7 +220,7 @@ if st.button("Send"):
         
 
         ################
-        print("******Câu lệnh là :******", result_3["query"])
+        print("-------------------------Kết quả bước 2, Câu lệnh là :-------------------------", result_3["query"])
         st.write("**Câu lệnh truy vấn dữ liệu**: ", result_3["query"])
         st.write("**Kết quả truy vấn**: ", result_4["result"])
 
@@ -240,6 +242,7 @@ if st.button("Send"):
             return response.content
         
         result_5 = generate_answer({"question":clarified_question, "result": result_4 }, openai)
+        print("-------------------------Kết quả bước 5, final answer :-------------------------", result_5)
         st.write("**Phản hồi của Chatbot**: ", result_5)
 
     # VI. Hiển thị:
