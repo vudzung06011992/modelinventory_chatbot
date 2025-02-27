@@ -206,6 +206,7 @@ if st.button("Send"):
             try:
                 # Generate query
                 result_3 = write_query(claude, info_dict)                
+                print("-------result_3 là ", result_3)
                 # Execute query
                 result_4 = execute_query(result_3)
                 break  # Nếu thành công, thoát khỏi vòng lặp
