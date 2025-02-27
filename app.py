@@ -148,6 +148,8 @@ if st.button("Send"):
                     - Đừng tự thêm điều kiện where mà người dùng không cần
                     - Không thêm ký tự \n, \ không cần thiết.
                     - Các trường text, thực hiện lấy giá trị lowcase để thực hiện điều kiện lọc.
+                    - Nếu chủ thể hỏi về mô hình, bạn phải liệt kê thông tin theo DevelopmentID (không phải theo Model ID): ví dụ 
+                        số lượng Mô Hình Bán Buôn Cho Doanh Nghiệp Vừa Theo Chuẩn Basel là 02 với DevelopmentID là 32, 33
                     - {previous_error}
                     
                     Bạn chỉ được trả ra câu lệnh query (không thêm bất kỳ thông tin nào khác) mà phải chạy được. Only return the Query, no explanation, no description.
