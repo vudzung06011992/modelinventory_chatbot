@@ -208,8 +208,8 @@ if st.button("Send"):
 
             except Exception as e:
                 error_message = str(e)
-                print(f"******QUERY ERROR (attempt {attempt}): Query {result_3['query']} xuất hiện lỗi: {error_message}")
-                st.write(f"QUERY ERROR (attempt {attempt}): Query {result_3['query']} xuất hiện lỗi: {error_message}")
+                print(f"******QUERY ERROR (attempt {attempt}): Việc tạo Query xuất hiện lỗi: {error_message}")
+                st.write(f"QUERY ERROR (attempt {attempt}): Việc tạo Query xuất hiện lỗi: {error_message}")
                 
                 # Update info_dict with error information for better context
                 info_dict["previous_error"] = "Hãy phân tích để phát hiện lỗi và tránh lỗi câu truy vấn sau: " + error_message + ". Câu truy vấn này đã gặp lỗi: " + error_message
