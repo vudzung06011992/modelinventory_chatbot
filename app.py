@@ -90,7 +90,11 @@ if st.button("Send"):
         print("-------------------------Kết quả bước 1: -------------------------\n", result_1)
 
         # tách thông tin từ kết quả trả về
-        result_1 = json.loads(result_1)
+        if isinstance(result_1, dict):
+            print("result_1 đã là dictionary, không cần json.loads()")
+        else:
+            result_1 = json.loads(result_1)
+
         clarified_question = result_1["clarified_question"]
         tables_to_extract = result_1["tables"]
 
