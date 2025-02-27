@@ -243,6 +243,8 @@ if st.button("Send"):
                 Question: {}
 
                 Result provided: {}
+
+                Câu trả lời cần liệt kê các thông tin liên quan tới định danh như DevelopmentID (không được cắt, bỏ thông tin)
                 
                 Trình bày đẹp, bỏ các ký tự \n đi
                 """.format(state["question"], state["result"])
