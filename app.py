@@ -422,10 +422,9 @@ if st.button("Send"):
                 if keyword in text:
                     return text.split(keyword, 1)[1].strip()
                 if "Action Input: " in text:   
-                    return text.split("Action Input: ", 1)[1].strip()
+                    _, _, result = text.rpartition("Action Input: ")
+                    return result.strip()
                 return text
-            
-            
 
             return {"query": extract_sql_from_final_answer(answer["messages"][1].content)}
         
