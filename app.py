@@ -50,7 +50,8 @@ def clarify_question(query, chat_history, llm_model):
     system = DB_SCHEMA_DESCRIPTION \
     + """You are a DB assistant. Dựa trên hội thoại trước: """ + context \
     + """Với câu hỏi hiện tại của User: {question}. """ \
-    + """ Nhiệm vụ của bạn là:
+    + """ 
+    Nhiệm vụ của bạn là:
     - Hãy diễn giải rõ ràng, chính xác yêu cầu của người dùng hiện tại (HÃY NHỚ RẰNG: những gì bạn không chắc chắn, đừng cho vào, đừng diễn giải, Không ghi cụ thể tên trường dữ liệu, không tóm tắt)
     - Các bảng dữ liệu cần dùng (bắt buộc phải có GSTD_Model Development). Nếu có đề cập tới phân loại theo loại 1, loại 2 hay loại 3 thì phải thêm bảng GSTD_Model Validation vào.  Nếu đề cập phân loại theo Cao, Thấp, Trung bình thì thêm bảng GSTD_Model Risk Rating vào.
     Kết quả cần trả ra là json có key là clarified_question và tables."""
@@ -383,6 +384,8 @@ if st.button("Send"):
                     - {previous_error}
                     
                     Bạn chỉ được trả ra câu lệnh query (không thêm bất kỳ thông tin nào khác) mà phải chạy được. Only return the Query, no explanation, no description.
+                    Ví dụ: 
+                    Đếm số lượng mô hình có loại mô hình là MC ==> câu trả lời đúng là SELECT COUNT(DISTINCT "DevelopmentID") FROM "GSTD_Model Development" d JOIN "GSTD_Model Inventory" i ON d."ModelID" = i."ModelID" WHERE LOWER(i."ModelSegmentation") = LOWER('Doanh nghiệp trung bình')
                     
                     Use the following format:
                     Question: the input question you must answer
