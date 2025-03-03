@@ -22,9 +22,10 @@ os.environ["LANGSMITH_PROJECT"] = st.secrets["LANGSMITH_PROJECT"]
 os.environ["LANGCHAIN_ENDPOINT"] = st.secrets["LANGCHAIN_ENDPOINT"]
 
 DB_SCHEMA_DESCRIPTION = """
-Để hỗ trợ bạn trả lời các câu hỏi trên, tôi đã cung cấp cho bạn một số thông tin cần thiết:
+Bạn có các file excel/csv về mô hình và trường dữ liệu tương ứng như sau:
+
 - Bảng "GSTD_Model Inventory" chứa thông tin về tên, phân loại, phân khúc mô hình, mã định danh mô hình, gồm các trường:
-ModelID: mã định danh mô hình, hoặc mã mô hình. 
+ModelID: mã tên mô hình. 
 ModelIDCharacter: tên mô hình theo QLRRTH
 ModelName: tên mô hình
 RiskType_lv1: phân loại model theo loại rủi ro cấp 1, bao gồm các nhóm như RRTD (rủi ro tín dụng), RRTT (rủi ro thị trường), RRHĐ (rủi ro hoạt động),... 
@@ -34,7 +35,8 @@ ModelSegmentation: phân khúc mô hình hướng tới
 
 - Bảng "GSTD_Model Development" lưu trữ thông tin về quá trình phát triển, xây dựng mô hình. 
 DevelopmentID: mã phát triển, mã xây dựng mô hình. 
-ModelID: mã mô hình. DevelopmentID: mã phát triển, mã xây dựng mô hình
+ModelID: mã tên mô hình. 
+DevelopmentID: mã mô hình, mã phát triển, mã xây dựng mô hình
 ModelVersion: Phiên bản của mô hình 
 ModelDevelopmentUnit: đơn vị hoặc bộ phận xây dựng mô hình. 
 MBO: MBO của mô hình
@@ -86,9 +88,9 @@ UsageFrequency, UsageStartDate, UsageEndDate lần lượt là: Tần suất ứ
 DevelopmentID: trường định danh, tương tự các bảng khác.
 ValidationID: Định danh duy nhất của kết quả kiểm định mô hình (KĐMH)
 ValidationType: loại Kiểm định (lần đầu, định kì, đột xuất)
-ModelValidationUnit: Bộ phận thực hiện KĐMH
+ModelValidationUnit: Bộ phận thực hiện KĐMH, ví dụ: Tổ kiểm định độc lập, Phòng QLRRTH, Tư vấn EY, Tư vấn BCG.
 ValidationDate: Ngày phê duyệt kết quả kiểm định
-ValidationConclusion: Kết luận kiểm định
+ValidationConclusion: Kết luận kiểm định, ví dụ: Loại 2, Loại 3, Loại 1.
 
 - GSTD_Model Recommendations: thông tin liên quan khuyến nghị, ghi nhận (các nội dung cần cải thiện). các cột gồm: 
 DevelopmentID: trường định danh, tương tự các bảng khác.
@@ -98,6 +100,7 @@ FindingStage: vấn đề phát hiện trong giai đoạn nào vòng đời
 Description: Mô tả khuyến nghị 
 DueDate: Thời hạn thực hiện chính thức
 RecommendationStatus: Trạng thái khuyến nghị ví dụ như chưa thực hiện hay đã thực hiện. 
+
 
 
 Diễn giải các thuật ngữ:
@@ -331,17 +334,17 @@ Bạn có danh sách các từ sau về thuật ngữ và các trường dữ li
                     ------------------------------------
 """
 
-FULL_DES_JSON ={
+FULL_DES_JSON = {
   "GSTD_Model Inventory": {
     "description": "GSTD_Model Inventory chứa thông tin về tên, phân loại, phân khúc mô hình, mã định danh mô hình, gồm các trường:",
     "fields": {
-      "ModelID": "Mã định danh mô hình, hoặc mã mô hình.",
-      "ModelIDCharacter": "Tên mô hình theo QLRRTH.",
-      "ModelName": "Tên mô hình",
+      "ModelID": "Trường Primary key, mã định danh tên mô hình, với cùng 01 tên, cùng 01 ModelID có thể có DevelopmentID khác nhau và ModelVersion khác nhau.",
+      "ModelIDCharacter": "Tên mô hình theo QLRRTH. Tên này theo kiểu ký hiệu, gồm các chữ cái viết tắt tạo thành. Trong một số trường hợp (không phải tất cả), có thể tìm ra thông tìn về loại tham số rủi ro, phân khúc, tiêu chuẩn, Quy định mô hình hướng tới dưới dạng ký hiệu.",
+      "ModelName": "Tên mô hình, được diễn giải chi tiết hơn so với ModelIDCharacter. Trong một số trường hợp (không phải tất cả), có thể tìm ra thông tìn về loại tham số rủi ro, phân khúc, tiêu chuẩn, Quy định mô hình hướng tới",
       "RiskType_lv1": "Phân loại model theo loại rủi ro cấp 1, bao gồm các nhóm như RRTD (rủi ro tín dụng), RRTT (rủi ro thị trường), RRHĐ (rủi ro hoạt động)",
       "RiskType_lv2": "Phân loại model theo loại rủi ro cấp 2, dựa theo RiskType_lv1 nhưng chi tiết hơn, ví dụ: RRTD bán buôn, RRTD bán lẻ, RRLSTSNH, RRTT, RRTD đối tác.",
       "RiskParameter": "Phân loại model theo tham số rủi ro ví dụ: PD, Supervisory slot, LGD, EAD, XHTD CR, EWS, BEEL, Hành vi tiền gửi KKH, Hành vi tiền vay, Hành vi tiền gửi có kì hạn, Định giá, Value-at-Risk, Add on, Stress test, Khác.",
-      "ModelSegmentation": """Phân khúc mô hình hướng tới, ví dụ như: Cho vay cá nhân sản xuất kinh doanh, Cho vay bất động sản, Cho vay khác, Cho vay từng lần, Thẻ tín dụng, .... Lưu ý cột này có các giá trị không viết tắt như RES, IBIZ, CC, ... mà đã được diễn giải đầy đủ. Các giá trị cụ thể bao gồm:
+      "ModelSegmentation": """Phân khúc mô hình hướng tới. Cột này được diễn giải đầy đủ, chi tiết (mặc dù vẫn có từ viết tắt). Các giá trị cụ thể bao gồm:
           -Doanh nghiệp lớn
           -Doanh nghiệp trung bình
           -Doanh nghiệp FDI
@@ -403,69 +406,75 @@ FULL_DES_JSON ={
           -Doanh nghiệp Bán lẻ vừa và nhỏ (chỉ bao gồm các khách hàng thuộc quản lý trên Sổ bán lẻ)
           -Deposit Loan Repo
           -Mô hình sử dụng dữ liệu thay thế 
-          -Khách hàng Bán lẻ"""}
+          -Khách hàng Bán lẻ"""
+    }
   },
   "GSTD_Model Development": {
     "description": "GSTD_Model Development lưu trữ thông tin về quá trình phát triển, xây dựng mô hình.",
     "fields": {
-      "DevelopmentID": "Mã phát triển, mã xây dựng mô hình.",
-      "ModelID": "Mã mô hình.",
+      "DevelopmentID": "Mã mô hình hoặc mã XDMH, trường primary key",
+      "ModelID": "Mã tên mô hình, trường foreign key. Với cùng 01 tên, cùng 01 ModelID có thể có DevelopmentID khác nhau (nghĩa là mô hình này được xây dựng lại, điều chỉnh, nâng cấp) và ModelVersion khác nhau.",
       "ModelDevelopmentUnit": "Đơn vị, bộ phận xây dựng model, ví dụ: Tư vấn Oliver Wyman, Phòng Quant, Phòng QLRRTT, Tư vấn BCG, Phòng ALM.",
+      "ModelVersion": "version của mô hình, thể hiện mô hình nào là mô hình cập nhật hơn với version càng lớn, version = 1 nghĩa là mô hình được xây dựng lần đầu. Với cùng 01 tên, cùng 01 ModelID có thể có DevelopmentID, ModelVersion khác nhau.",
       "MBO": "MBO của mô hình, ví dụ: QLRRTD, Công nợ, QLRRTT, ALM.",
-      "AuthorityApproval": "Cấp thẩm quyền phê duyệt, gồm cấp HĐQT, CEO, CRO, EBO.",
-      "LifecycleStage": "Trạng thái hiện tại của model trong vòng đời, ví dụ: Ứng dụng mô hình, Triển khai mô hình, Phê duyệt mô hình, Kiểm định mô hình lần đầu, Đã hoàn thành triển khai nhưng chưa ứng dụng, Xây dựng mô hình.",
-      "DevelopmentDate": "Ngày phê duyệt kết quả XDMH, format text  'YYYYMMDD' (lưu ý dạng text, không phải date hay int).",
-      "TerminationDate": "Ngày phê duyệt dừng ứng dụng. Nếu mô hình chưa ứng dụng, trường để trống.",
-      "ModelStatus": "Trạng thái hiệu lực của mô hình, ví dụ: Đang hiệu lực, Chưa hiệu lực, Hết hiệu lực."
+      "AuthorityApproval": "Cấp thẩm quyền phê duyệt, gồm cấp như HĐQT, CEO, CRO, EBO.",
+      "LifecycleStage": "Giai đoạn hiện tại của model trong vòng đời, gồm các giá trị theo thứ tự: Xây dựng mô hình, Kiểm định mô hình lần đầu, Phê duyệt mô hình, Triển khai mô hình, Đã hoàn thành triển khai nhưng chưa ứng dụng, Ứng dụng mô hình. Mô hình chưa được phê duyệt nghĩa là Chưa hiệu lực",
+      "DevelopmentDate": "Ngày phê duyệt kết quả XDMH, format text YYYYMMDD (lưu ý dạng text, không phải date hay int). Nếu trường này bị null, nghĩa là mô hình chưa hiệu lực",
+      "TerminationDate": "Ngày phê duyệt dừng ứng dụng. Trường này không NULL nghĩa là mô hình hết hiệu lực. ",
+      "ModelStatus": "Trạng thái hiệu lực của mô hình, có các giá trị: Đang hiệu lực, Chưa hiệu lực, Hết hiệu lực."
     }
   },
   "GSTD_Model Implementation": {
-    "description": "GSTD_Model Implementation: Bảng liên quan tới triển khai, tin học hóa.",
+    "description": "GSTD_Model Implementation mô tả thông tin việc triển khai, tin học hóa, mô hình nào không có DevelopmentID trong bảng => chưa từng triển khai",
     "fields": {
-      "ImplementationType": "Hình thức tin học hóa, triển khai, ví dụ: Tin học hóa toàn bộ bởi Bộ phận CNTT, Tin học hóa bởi Đơn vị thuê ngoài, Tin học hóa toàn bộ bởi Bộ phận XDMH.",
-      "DevelopmentID": "trường định danh, tương tự các bảng khác.",
-      "ImplementationID": "Định danh duy nhất của triển khai",
+      "ImplementationType": "phân loại tin học hóa, triển khai, ví dụ: Tin học hóa toàn bộ bởi Bộ phận CNTT, Tin học hóa bởi Đơn vị thuê ngoài, Tin học hóa toàn bộ bởi Bộ phận XDMH. Với trường này, bạn có thể trích xuất được thông tin đơn vị làm triển khai, tin học hóa",
+      "DevelopmentID": "Mã mô hình, trường foreign key. ",
+      "ImplementationID": " Primary Key, Định danh duy nhất của triển khai, mã triển khai. Một mô hình có thể có nhiều hơn 1 mã triển khai",
       "ImplementationDate": "Ngày phê duyệt kết quả triển khai"
     }
   },
   "GSTD_Model Monitoring": {
-    "description": "GSTD_Model Monitoring: Bảng liên quan tới GSMH.",
+    "description": "GSTD_Model Monitoring mô tả thông tin GSMH, mô hình không có thông tin DevelopmentID trong bảng => chưa từng giám sát",
     "fields": {
-      "MonitoringType": "Phân loại Giám sát ví dụ: Giám sát đột xuất, Giám sát định kì.",
-      "MonitoringDate": "Ngày phê duyệt kết quả GSMH.",
-      "MonitoringReportDate": "Ngày hoàn thành dự thảo báo cáo giám sát.",
-      "DevelopmentID": "Trường định danh, tương tự các bảng khác.",
-      "MonitoringID": "Định danh duy nhất của kết quả GSMH."
+      "MonitoringType": "Phân loại Giám sát ví dụ: Giám sát đột xuất, Giám sát định kì",
+      "MonitoringDate": "Ngày phê duyệt kết quả GSMH, ngày này có thể bằng hoặc sau ngày MonitoringReportDate vì phải hoàn thành dự thảo rồi mới bước phê duyệt.",
+      "MonitoringReportDate": "Ngày hoàn thành dự thảo báo cáo giám sát",
+      "DevelopmentID": "Foreign key",
+      "MonitoringID": "Primary key, Định danh duy nhất của kết quả GSMH"
     }
   },
   "GSTD_Model Risk Rating": {
-    "description": "GSTD_Model Risk Rating: Bảng về tới xếp hạng rủi ro (XHRRMH).",
+    "description": "GSTD_Model Risk Rating: mô tả xếp hạng rủi ro (XHRRMH) mô hình",
     "fields": {
-      "DevelopmentID": "Trường định danh, tương tự các bảng khác.",
-      "RiskRatingID": "Định danh duy nhất của kết quả XHRRMH.",
+      "DevelopmentID": "Foreign key, trường định danh, tương tự các bảng khác. ",
+      "RiskRatingID": "Primary key, định danh duy nhất của kết quả XHRRMH.",
       "RatingStage": "Xếp hạng rủi ro xác định trong giai đoạn nào của vòng đời, ví dụ: Xây dựng mô hình, Giám sát mô hình, Kiểm định mô hình.",
       "RatingDate": "Ngày thực hiện XHRRMH.",
-      "ModelRiskRating": "Kết quả xếp hạng RRMH, ví dụ: Cao, Trung bình, Thấp."
+      "ModelRiskRating": "Kết quả xếp hạng RRMH, ví dụ: Cao, Trung bình, Thấp.",
+      "MappingID": """trường này dùng là trường key để ghép nối bảng về XDMH, GSMH, KĐMH. nếu RatingStage tương ứng với giai đoạn nào 'Xây dựng mô hình" thì MappingID chính là ID của bảng liên quan giai đoạn đó, ví dụ: 
+-	nếu RatingStage = 'Xây dựng mô hình" thì MappingID chính là DevelopmentID
+-	nếu RatingStage = 'Giám sát mô hình' thì MappingID chính là MonitoringID
+-	nếu RatingStage = 'Kiểm định mô hình' thì MappingID chính là ValidationID"""
     }
   },
   "GSTD_Model Usage": {
     "description": "GSTD_Model Usage: Bảng về ứng dụng.",
     "fields": {
-        "DevelopmentID": "Trường định danh, tương tự các bảng khác.",
-      "UsageID": "Định danh duy nhất của ứng dụng.",
+      "DevelopmentID": "Foreign key",
+      "UsageID": " primary key , Định danh duy nhất của ứng dụng.",
       "ApplicationPurpose": "Mục đích ứng dụng.",
-      "MBO": "MBO tương ứng với mục đích ứng dụng, ví dụ: QLRRTD, Công nợ, PTSPBL, QLRRTT.",
+      "MBO": "MBO ứng dụng, MBO tương ứng với mục đích ứng dụng, ví dụ: QLRRTD, Công nợ, PTSPBL, QLRRTT.",
       "UsageFrequency": "Tần suất ứng dụng, ví dụ: Hàng ngày, Hàng quý, Khác, Hàng tháng, Hàng năm.",
       "UsageStartDate": "Ngày bắt đầu ứng dụng.",
       "UsageEndDate": "Ngày dừng ứng dụng."
     }
+
   },
   "GSTD_Model Validation": {
     "description": "GSTD_Model Validation: Bảng về kiểm định (không phải kiểm toán).",
-    "fields": {
-        
-      "DevelopmentID": "Trường định danh, tương tự các bảng khác.",
-      "ValidationID": "Định danh duy nhất của kết quả kiểm định mô hình (KĐMH).",
+    "fields": {     
+      "DevelopmentID": "Foreign key",
+      "ValidationID": " primary key ,Định danh duy nhất kết quả kiểm định mô hình (KĐMH).",
       "ValidationType": "Loại Kiểm định ví dụ: Kiểm định lần đầu, Kiểm định định kì, Kiểm định đột xuất.",
       "ModelValidationUnit": "Bộ phận thực hiện KĐMH, ví dụ: Tổ kiểm định độc lập, Phòng QLRRTH, Tư vấn EY, Tư vấn BCG.",
       "ValidationDate": "Ngày phê duyệt kết quả kiểm định.",
@@ -474,36 +483,42 @@ FULL_DES_JSON ={
   },
 
   "GSTD_Model Recommendations": {
-    "description": "GSTD_Recommendations: Thông tin liên quan khuyến nghị, ghi nhận (các nội dung cần cải thiện).",
+    "description": "GSTD_Recommendations: Thông tin liên quan khuyến nghị, ghi nhận, vấn đề.",
     "fields": {
-       "DevelopmentID": "Trường định danh, tương tự các bảng khác.",
-      "RecommendationID": "Định danh duy nhất của khuyến nghị.",
+       "DevelopmentID": "Foreign key",
+      "RecommendationID": " primary key ,Định danh duy nhất của khuyến nghị.",
       "ProposedUnit": "Bộ phận đưa ra vấn đề, ghi nhận, ví dụ: Phòng QLRRTH, Phòng Quant, Tư vấn EY, Phòng KToNB, Tổ kiểm định độc lập.",
       "FindingStage": "Vấn đề phát hiện trong giai đoạn nào vòng đời, ví dụ: Giám sát mô hình, Kiểm định mô hình, Kiểm toán mô hình, Xây dựng mô hình.",
       "Description": "Mô tả khuyến nghị.",
       "DueDate": "Thời hạn thực hiện chính thức.",
-      "RecommendationStatus": "Trạng thái khuyến nghị ví dụ như chưa thực hiện hay đã thực hiện."
+      "RecommendationStatus": "Trạng thái khuyến nghị ví dụ như chưa thực hiện hay đã thực hiện.",
+      "MappingID": """trường này dùng là trường key để ghép nối bảng về XDMH, GSMH, KĐMH. nếu RatingStage tương ứng với giai đoạn nào 'Xây dựng mô hình" thì MappingID chính là ID của bảng liên quan giai đoạn đó, ví dụ: 
+-	nếu RatingStage = 'Xây dựng mô hình" thì MappingID chính là DevelopmentID
+-	nếu RatingStage = 'Giám sát mô hình' thì MappingID chính là MonitoringID
+-	nếu RatingStage = 'Kiểm định mô hình' thì MappingID chính là ValidationID"""
+
     }
   },
+
   "GSTD_Model Compliance": {
-    "description": "GSTD_Model Compliance: thông tin về việc tuân thủ các quy định và tiêu chuẩn như Basel, IFRS9, v.v. Bảng này giúp theo dõi xem mô hình được phát triển theo quy định, tiêu chuẩn nào.",
+    "description": "GSTD_Model Compliance: thông tin về việc tuân thủ các quy định và tiêu chuẩn như Basel (Basel có thể có nhiều loại), IFRS9, v.v. Bảng này giúp theo dõi xem mô hình được phát triển theo quy định, tiêu chuẩn nào.",
     "fields": {
-      "ComplianceID": "Trường định danh, giúp nhận diện từng trường hợp tuân thủ",
-      "DevelopmentID": "Trường định danh, tương tự các bảng khác",
-      "RegulatoryCompliance": "Thông tin tiêu chuẩn, quy định phải tuân thủ như Basel, IFRS9, Thông tư 41/2016/TT-NHNN. Dữ liệu ở dạng list (một mô hình có thể có nhiều tiêu chuẩn, ví dụ ['Basel II RRTD - FIRB','Basel II RRTD - AIRB','IFRS9']) "
+      "ComplianceID": " primary key, Trường định danh, giúp nhận diện từng trường hợp tuân thủ",
+       "DevelopmentID": "Foreign key",
+      "RegulatoryCompliance": "Thông tin tiêu chuẩn, quy định phải tuân thủ như Basel, IFRS9, Thông tư 41/2016/TT-NHNN. Dữ liệu ở dạng list (một mô hình có thể có nhiều tiêu chuẩn, ví dụ Basel II RRTD - FIRB,  Basel II RRTD - AIRB, IFRS9]) "
     }
   },
   "GSTD_Model Audit": {
     "description": "GSTD_Model Audit: Thông tin liên quan đến kiểm toán mô hình, giúp đánh giá mức độ phù hợp và chính xác của mô hình theo tiêu chuẩn nội bộ và bên ngoài.",
     "fields": {
-        
-      "AuditID": "Định danh duy nhất của kết quả kiểm toán mô hình.",
-      "DevelopmentID": "Trường định danh, tương tự các bảng khác.",
+      "AuditID": " primary key , Định danh duy nhất của kết quả kiểm toán mô hình.",
+       "DevelopmentID": "Foreign key",
       "ModelAuditUnit": "Bộ phận thực hiện kiểm toán mô hình, ví dụ: Kiểm toán nội bộ, EY, Deloitte.",
       "AuditDate": "Ngày phê duyệt kết quả kiểm toán."
     }
   }
 }
+
 
 GENERAL_DB_QUERY_PROMPT = """
  
