@@ -166,8 +166,8 @@ if st.button("Send"):
                     REV trong hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
                     REVOL trong hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
                     REVOLVING trong hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
-                    "
-                    REV còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation"
+                    
+                    REV còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
                     REVOL còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
                     REVOLVING còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
                     TTTM trong hiệu lực giải ngân = TTTM tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
@@ -196,7 +196,7 @@ if st.button("Send"):
                     REV trong hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
                     REVOL trong hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
                     REVOLVING trong hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                    "
+                    
                     REV còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation"
                     REVOL còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
                     REVOLVING còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
@@ -221,20 +221,20 @@ if st.button("Send"):
                     FB, foreign bank = Ngân hàng nước ngoài => ModelSegmentation
                     NBCI = Tổ chức tín dụng phi ngân hàng => ModelSegmentation
                     NCFI = Định chế tài chính phi tín dụng => ModelSegmentation
-                    NCFI – NONREV – LOAN = Định chế tài chính phi tín dụng - Cho vay không tuần hoàn/ tuần hoàn hết hiệu lực giải ngân => ModelSegmentation
+                    NCFI - NONREV - LOAN = Định chế tài chính phi tín dụng - Cho vay không tuần hoàn/ tuần hoàn hết hiệu lực giải ngân => ModelSegmentation
                     NCFI NONREV LOAN = Định chế tài chính phi tín dụng - Cho vay không tuần hoàn/ tuần hoàn hết hiệu lực giải ngân => ModelSegmentation
                     NCFI NONREVOLVING LOAN = Định chế tài chính phi tín dụng - Cho vay không tuần hoàn/ tuần hoàn hết hiệu lực giải ngân => ModelSegmentation
                     NCFI LOAN NONREV = Định chế tài chính phi tín dụng - Cho vay không tuần hoàn/ tuần hoàn hết hiệu lực giải ngân => ModelSegmentation
                     NCFI LOANNONREV = Định chế tài chính phi tín dụng - Cho vay không tuần hoàn/ tuần hoàn hết hiệu lực giải ngân => ModelSegmentation
-                    NCFI – CARD = Định chế tài chính phi tín dụng - Thẻ tín dụng => ModelSegmentation
+                    NCFI - CARD = Định chế tài chính phi tín dụng - Thẻ tín dụng => ModelSegmentation
                     NCFI CARD = Định chế tài chính phi tín dụng - Thẻ tín dụng => ModelSegmentation
                     NCFI CC = Định chế tài chính phi tín dụng - Thẻ tín dụng => ModelSegmentation
                     NCFI-CC = Định chế tài chính phi tín dụng - Thẻ tín dụng => ModelSegmentation
-                    NCFI – REV – LOAN = Định chế tài chính phi tín dụng - Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
+                    NCFI - REV - LOAN = Định chế tài chính phi tín dụng - Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
                     NCFI REV LOAN = Định chế tài chính phi tín dụng - Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
                     NCFI REVOLVING LOAN = Định chế tài chính phi tín dụng - Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
                     NCFI loanREV; = Định chế tài chính phi tín dụng - Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
-                    NCFI – TF = Định chế tài chính phi tín dụng - TTTM tuần hoàn/ tuần trong hiệu lực giải ngân => ModelSegmentation
+                    NCFI - TF = Định chế tài chính phi tín dụng - TTTM tuần hoàn/ tuần trong hiệu lực giải ngân => ModelSegmentation
                     NCFI TF = Định chế tài chính phi tín dụng - TTTM tuần hoàn/ tuần trong hiệu lực giải ngân => ModelSegmentation
                     NCFI TTTM = Định chế tài chính phi tín dụng - TTTM tuần hoàn/ tuần trong hiệu lực giải ngân => ModelSegmentation
                     NCFI-TTTM = Định chế tài chính phi tín dụng - TTTM tuần hoàn/ tuần trong hiệu lực giải ngân => ModelSegmentation
@@ -353,8 +353,8 @@ if st.button("Send"):
                     Add on FX JPY VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
                     Addon FX JPY/VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
                     Addon FX JPY-VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
-                    "MtM FI BOND CP 1Y = Mô hình định giá GTCG do TCTD phát hành có quyền chọn call put đồng thời kỳ hạn từ 1 năm trở xuống trên sổ kinh doanh	 => ModelName"
-                    "MtM FI BOND call put 1Y = Mô hình định giá GTCG do TCTD phát hành có quyền chọn call put đồng thời kỳ hạn từ 1 năm trở xuống trên sổ kinh doanh	 => ModelName"
+                    MtM FI BOND CP 1Y = Mô hình định giá GTCG do TCTD phát hành có quyền chọn call put đồng thời kỳ hạn từ 1 năm trở xuống trên sổ kinh doanh	 => ModelName
+                    MtM FI BOND call put 1Y = Mô hình định giá GTCG do TCTD phát hành có quyền chọn call put đồng thời kỳ hạn từ 1 năm trở xuống trên sổ kinh doanh	 => ModelName
                     MtM GTCG SNH = Mô hình định giá giao dịch GTCG TCTD SNH => ModelName
                     MtM GTCG BB = Mô hình định giá giao dịch GTCG TCTD SNH => ModelName
                     MtM GTCG ALM = Mô hình định giá giao dịch GTCG TCTD SNH => ModelName
@@ -417,6 +417,8 @@ if st.button("Send"):
                 if "Action Input: " in text:   
                     return text.split(keyword, 1)[1].strip()
                 return text
+            
+            
 
             return {"query": extract_sql_from_final_answer(answer["messages"][1].content)}
         
