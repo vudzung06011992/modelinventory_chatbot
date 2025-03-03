@@ -32,7 +32,7 @@ print("kết nối db thành công")
 from langchain_community.chat_models import ChatOpenAI
 # claude = ChatAnthropic(model="claude-3-5-sonnet-20241022", temperature=0.7)
 # openai = init_chat_model("gpt-4")
-openai = ChatOpenAI(model_name="gpt-4")
+openai = ChatOpenAI(model_name="gpt-3.5-turbo")
 claude = init_chat_model("claude-3-5-sonnet-20241022")
 
 # Tạo bộ nhớ hội thoại
@@ -464,16 +464,27 @@ if st.button("Send"):
         st.write("**Kết quả truy vấn**: ", result_4["result"])
 
         # V. Trả lời
-    
-        print("-------------------------Kết quả bước 5, final answer :-------------------------")
-        st.write("**Phản hồi của Chatbot**: ")
-        import pandas as pd
-        if result_4["result"].data:
-            
-            df = pd.DataFrame(result_4["result"].data)
-            
-            # Hiển thị dataframe đẹp
-            st.dataframe(df.style.format({"amount": "{:,.2f}"}))  # Format số đẹp
+        def generate_answer(state, model):
+            """Answer question using retrieved information as context."""
+            prompt = (
+                """
+                Given the following user question, corresponding query, 
+                and db retrieval result, answer the user question.\n\n
+                Question: {}
+
+                Result provided: {}
+
+                Câu trả lời cần liệt kê các thông tin liên quan tới định danh như DevelopmentID (không được cắt, bỏ thông tin)
+                
+                Trình bày đẹp, bỏ các ký tự \n đi
+                """.format(state["question"], state["result"])
+            )
+            response = model.invoke(prompt)
+            return response.content
+
+        result_5 = generate_answer({"question":clarified_question, "result": result_4 }, openai)
+        print("-------------------------Kết quả bước 5, final answer :-------------------------", result_5)
+        st.write("**Phản hồi của Chatbot**: ", result_5)
 
 
     # VI. Hiển thị:
