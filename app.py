@@ -449,7 +449,7 @@ if st.button("Send"):
                 st.write(f"QUERY ERROR (attempt {attempt}): Việc tạo Query xuất hiện lỗi: {error_message}")
                 
                 # Update info_dict with error information for better context
-                info_dict["previous_error"] = "Hãy phân tích để phát hiện lỗi và tránh lỗi câu truy vấn sau: " + error_message + ". Câu truy vấn này đã gặp lỗi: " + error_message
+                info_dict["previous_error"] = "Hãy phân tích để phát hiện lỗi và tránh lỗi từ truy vấn sau: " + result_3["query"] + ". Câu truy vấn này đã gặp lỗi: " + error_message
                 if attempt == max_attempts:
                     st.error(f"Không thể tạo câu truy vấn hợp lệ sau {max_attempts} lần thử. Lỗi cuối cùng: {error_message}")
                     break  # Dừng vòng lặp ngay
@@ -465,7 +465,7 @@ if st.button("Send"):
 
         # V. Trả lời
     
-        print("-------------------------Kết quả bước 5, final answer :-------------------------", result_5)
+        print("-------------------------Kết quả bước 5, final answer :-------------------------")
         st.write("**Phản hồi của Chatbot**: ")
         import pandas as pd
         if result_4["result"].data:
