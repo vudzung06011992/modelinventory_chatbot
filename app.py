@@ -87,6 +87,7 @@ if st.button("Send"):
 
         ################ I. Thực thi query SQL từ AI với ngữ cảnh hội thoại ################
         result_1 = clarify_question(user_input, st.session_state.chat_history, claude)
+        
         print("-------------------------Kết quả bước 1: -------------------------\n", result_1)
 
         # tách thông tin từ kết quả trả về
@@ -96,6 +97,7 @@ if st.button("Send"):
             result_1 = json.loads(result_1)
 
         clarified_question = result_1["clarified_question"]
+        st.write("**câu hỏi được làm rõ**: ", clarified_question)
         tables_to_extract = result_1["tables"]
 
         ################ II. Extract thông tin cần thiết ################
