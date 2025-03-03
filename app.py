@@ -422,7 +422,7 @@ if st.button("Send"):
                 if keyword in text:
                     return text.split(keyword, 1)[1].strip()
                 if "Action Input: " in text:   
-                    return text.split(keyword, 1)[1].strip()
+                    return text.split("Action Input: ", 1)[1].strip()
                 return text
             
             
