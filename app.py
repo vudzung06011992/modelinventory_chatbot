@@ -369,6 +369,7 @@ if st.button("Send"):
                     Lưu ý:
                     - TÊN CÁC BẢNG, CỘT PHẢI ĐỂ TRONG ""
                     - Việc mapping các bảng dựa trên DevelopmentID. Trường DevelopmenID không phải là ModelID. Không được dùng DevelopmenID = ModelID
+                    - Bảng GSTD_Model Inventory không có DevelopmentID.
                     - Câu lệnh phải tuân thủ nguyên tắc {dialect} trong Supabase.
                     - Các TRƯỜNG DATE (tên trường có chữ date) phải được chuyển đổi về int với giá trị không null, rồi mới sử dụng. Lưu ý: các trường này có thể tồn tại giá trị NULL hoặc missing.
                     - Bạn phải rà soát câu hỏi người dùng để đảm bảo câu lệnh trả về kết quả chính xác.
@@ -497,7 +498,7 @@ if st.button("Send"):
  
     summarized_where_query = summarize_query(result_3["query"], openai)
     st.session_state.chat_history.append({"user": user_input, \
-                                                                "bot": "Phản hồi của Chatbot: " + str(summarized_where_query)})
+                                                                "bot": "Phản hồi của Chatbot: " + result_3["query"]})
 
 # Hiển thị lịch sử hội thoại
 st.subheader(" Lịch sử hội thoại ")
