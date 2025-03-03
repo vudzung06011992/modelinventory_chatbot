@@ -428,9 +428,9 @@ if st.button("Send"):
             return {"result": execute_query_tool.invoke(state["query"])}
 
         # Tạo query và execute
-        attempt = 5
+        attempt = 0
         error_message = None
-        max_attempts = 2
+        max_attempts = 5
         info_dict["previous_error"] = ""
 
         while attempt <= max_attempts:
