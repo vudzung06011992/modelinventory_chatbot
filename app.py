@@ -437,14 +437,12 @@ if st.button("Send"):
         info_dict["previous_error"] = ""
 
         while attempt <= max_attempts:
+            result_3 = write_query(claude, info_dict)                
+            print("-------result_3 là ", result_3)
             try:
-                # Generate query
-                result_3 = write_query(claude, info_dict)                
-                print("-------result_3 là ", result_3)
                 # Execute query
                 result_4 = execute_query(result_3)
                 break  # Nếu thành công, thoát khỏi vòng lặp
-
             except Exception as e:
                 error_message = str(e)
                 print(f"******QUERY ERROR (attempt {attempt}): Việc tạo Query xuất hiện lỗi: {error_message}")
