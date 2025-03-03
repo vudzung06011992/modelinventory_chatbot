@@ -395,7 +395,7 @@ if st.button("Send"):
                     Observation: the result of the action
                     ... (this Thought/Action/Action Input/Observation can repeat N times)
                     Thought: I now know the final answer
-                    Final Answer: the final answer to the original input question
+                    Final Answer: the final answer to the original input question. final answer chỉ là mã lập trình, không được có thêm gì khác. final answer chỉ là mã lập trình, không được có thêm gì khác. 
                     
                     Begin!
                     Question: {question}
