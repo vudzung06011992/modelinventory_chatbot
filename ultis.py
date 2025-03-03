@@ -286,8 +286,8 @@ Bạn có danh sách các từ sau về thuật ngữ và các trường dữ li
                     MobiFone = Mô hình sử dụng dữ liệu thay thế  => ModelSegmentation
                     Alternative data = Mô hình sử dụng dữ liệu thay thế  => ModelSegmentation
                     alternative = Mô hình sử dụng dữ liệu thay thế  => ModelSegmentation
-                    BL = Khách hàng Bán lẻ => ModelSegmentation
-                    Retail = Khách hàng Bán lẻ => ModelSegmentation
+                    BL (chỉ áp dụng cho mô hình có RiskParameter = Stress test)= Khách hàng Bán lẻ => ModelSegmentation   (lưu ý, chỉ áp dụng cho mô hình có RiskParameter = Stress test)
+                    Retail (chỉ áp dụng cho mô hình có RiskParameter = Stress test) = Khách hàng Bán lẻ => ModelSegmentation (lưu ý, chỉ áp dụng cho mô hình có RiskParameter = Stress test)
                     TPCP = Định giá sản phẩm Giấy tờ có giá do Kho bạc Nhà nước phát hành => ModelName
                     GOV BOND = Định giá sản phẩm Giấy tờ có giá do Kho bạc Nhà nước phát hành => ModelName
                     TPCPBL/ CQDP = Định giá sản phẩm Giấy tờ có giá được Chính phủ bảo lãnh/Chính quyền địa phương phát hành => ModelName
