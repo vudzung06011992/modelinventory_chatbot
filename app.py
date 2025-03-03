@@ -417,6 +417,7 @@ if st.button("Send"):
 
             def extract_sql_from_final_answer(text):
                 """Trích xuất câu SQL từ nội dung chứa 'Final Answer:'"""
+                print("debug: text là ", text)
                 keyword = "Final Answer:"
                 if keyword in text:
                     return text.split(keyword, 1)[1].strip()
