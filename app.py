@@ -199,7 +199,7 @@ if st.button("Send"):
             return {"result": execute_query_tool.invoke(state["query"])}
 
         # Tạo query và execute
-        attempt = 1
+        attempt = 5
         error_message = None
         max_attempts = 2
         info_dict["previous_error"] = ""
@@ -234,27 +234,17 @@ if st.button("Send"):
         st.write("**Kết quả truy vấn**: ", result_4["result"])
 
         # V. Trả lời
-        def generate_answer(state, model):
-            """Answer question using retrieved information as context."""
-            prompt = (
-                """
-                Given the following user question, corresponding query, 
-                and db retrieval result, answer the user question.\n\n
-                Question: {}
-
-                Result provided: {}
-
-                Câu trả lời cần liệt kê các thông tin liên quan tới định danh như DevelopmentID (không được cắt, bỏ thông tin)
-                
-                Trình bày đẹp, bỏ các ký tự \n đi
-                """.format(state["question"], state["result"])
-            )
-            response = model.invoke(prompt)
-            return response.content
-        
-        result_5 = generate_answer({"question":clarified_question, "result": result_4 }, openai)
+    
         print("-------------------------Kết quả bước 5, final answer :-------------------------", result_5)
-        st.write("**Phản hồi của Chatbot**: ", result_5)
+        st.write("**Phản hồi của Chatbot**: ")
+        import pandas as pd
+        if result_4["result"].data:
+            
+            df = pd.DataFrame(result_4["result"].data)
+            
+            # Hiển thị dataframe đẹp
+            st.dataframe(df.style.format({"amount": "{:,.2f}"}))  # Format số đẹp
+
 
     # VI. Hiển thị:
     def remove_newlines(text):
