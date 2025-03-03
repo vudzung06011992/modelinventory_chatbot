@@ -430,7 +430,7 @@ if st.button("Send"):
         
         def execute_query(state):
             """Execute SQL query."""
-            
+            print("Câu lệnh để query là ", state["query"])
             return {"result": execute_query_tool.invoke(state["query"])}
 
         # Tạo query và execute
