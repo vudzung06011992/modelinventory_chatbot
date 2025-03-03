@@ -32,7 +32,7 @@ print("kết nối db thành công")
 from langchain_community.chat_models import ChatOpenAI
 # claude = ChatAnthropic(model="claude-3-5-sonnet-20241022", temperature=0.7)
 # openai = init_chat_model("gpt-4")
-openai = ChatOpenAI(model_name="gpt-3.5-turbo")
+openai = ChatOpenAI(model_name="gpt-4")
 claude = init_chat_model("claude-3-5-sonnet-20241022")
 
 # Tạo bộ nhớ hội thoại
