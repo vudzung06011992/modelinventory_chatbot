@@ -437,7 +437,13 @@ if st.button("Send"):
         def execute_query(state):
             """Execute SQL query."""
             print("Câu lệnh để query là ", state["query"])
-            return {"result": execute_query_tool.invoke(state["query"])}
+
+            import pandas as pd
+            db = SQLDatabase.from_uri(SUPABASE_URI)
+            
+
+            # return {"result": execute_query_tool.invoke(state["query"])}
+            return {"result": pd.DataFrame(db._execute(state["query"]))}
 
         # Tạo query và execute
         attempt = 0
@@ -471,7 +477,8 @@ if st.button("Send"):
         ################
         print("-------------------------Kết quả bước 2, Câu lệnh là :-------------------------", result_3["query"])
         st.write("**Câu lệnh truy vấn dữ liệu**: ", result_3["query"])
-        st.write("**Kết quả truy vấn**: ", result_4["result"])
+        # st.write("**Kết quả truy vấn**: ", result_4["result"])
+        st.dataframe(result_4["result"])
 
         # V. Trả lời
         def generate_answer(state, model):
