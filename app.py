@@ -434,6 +434,8 @@ if st.button("Send"):
                 if "Action Input: " in text:   
                     _, _, result = text.rpartition("Action Input: ")
                     result =  result
+                else: 
+                    result = text
                 if "Final Answer:" in result:
                     _, _, result = result.rpartition("Final Answer: ")
                     result =  result
