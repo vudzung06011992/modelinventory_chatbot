@@ -422,12 +422,12 @@ if st.button("Send"):
                 st.write("------------------------------ text la  ", text)
                 if "Action Input: " in text:   
                     _, _, result = text.rpartition("Action Input: ")
-                    result =  result.strip()
+                    result =  result
                 if "Final Answer:" in result:
                     _, _, result = result.rpartition("Final Answer: ")
-                    result =  result.strip()
+                    result =  result
                 if "Observation" in result:
-                    result = result.split("Observation")[0].strip()
+                    result = result.split("Observation")[0]
                 return result
 
             final_sql = extract_sql_from_final_answer(answer["messages"][1].content)
