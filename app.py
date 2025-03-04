@@ -40,7 +40,11 @@ claude = init_chat_model("claude-3-5-sonnet-20241022", temperature=0.5)
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, k = 5)
 
 # Hàm truy vấn dữ liệu từ Supabase
-def clarify_question(query, chat_history, llm_model):
+from functools import lru_cache
+
+@lru_cache(maxsize=100) 
+def cached_clarify_question(query, chat_history_str):
+    chat_history = json.loads(chat_history_str) if chat_history_str else []
 
     def remove_curly_braces(text):
         return text.replace("{", "").replace("}", "")
@@ -64,12 +68,8 @@ def clarify_question(query, chat_history, llm_model):
         ("system", system), ("human", human)
     ])
 
-    chain = prompt | llm_model
-    tmp = chain.invoke(
-        {
-            "question": query
-        })  
-
+    chain = prompt | claude  # Sử dụng claude trực tiếp vì llm_model_name chỉ để log
+    tmp = chain.invoke({"question": query})  
     return tmp.content
 
 # Giao diện Streamlit
@@ -90,7 +90,7 @@ if st.button("Send"):
         memory.save_context({"input": user_input}, {"output": ""})
 
         ################ I. Thực thi query SQL từ AI với ngữ cảnh hội thoại ################
-        result_1 = clarify_question(user_input, st.session_state.chat_history, claude)
+        result_1 = cached_clarify_question(user_input, st.session_state.chat_history)
     
         print("-------------------------Kết quả bước 1: -------------------------\n", result_1)
 
