@@ -95,6 +95,7 @@ if st.button("Send"):
         if isinstance(result_1, dict):
             print("result_1 đã là dictionary, không cần json.loads()")
         else:
+            result_1 = result_1.replace("\n", "  ")
             result_1 = json.loads(result_1)
 
         clarified_question = result_1["clarified_question"]
