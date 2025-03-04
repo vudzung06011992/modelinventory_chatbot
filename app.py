@@ -33,7 +33,7 @@ print("kết nối db thành công")
 # Cấu hình LLM
 from langchain_community.chat_models import ChatOpenAI
 openai = ChatOpenAI(model_name="gpt-4")
-claude = init_chat_model("claude-3-5-sonnet-20241022")
+claude = init_chat_model("claude-3-5-sonnet-20241022", temperature=0.2)
 
 # Tạo bộ nhớ hội thoại
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, k = 5)
@@ -65,7 +65,7 @@ def clarify_question(query, chat_history, llm_model):
     tmp = chain.invoke(
         {
             "question": query
-        }, temperature=0.3)  
+        })  
 
     return tmp.content
 
@@ -417,7 +417,7 @@ if st.button("Send"):
 
             # Tạo Agent Executor (Dùng Prompt ĐÃ FORMAT)
             agent_executor = create_react_agent(llm_model, tools, prompt=formatted_prompt)
-            answer = agent_executor.invoke({"messages": [{"role": "user", "content": info_dict["question"]}]}, temperature=0.2)
+            answer = agent_executor.invoke({"messages": [{"role": "user", "content": info_dict["question"]}]})
 
             def extract_sql_from_final_answer(text):
                 print("text truoc khi extract", text)
