@@ -430,6 +430,8 @@ if st.button("Send"):
 
                 return text
             final_sql = extract_sql_from_final_answer(answer["messages"][1].content)
+            st.write("------------------------------ final_sql bat dau ", final_sql)
+            st.write("------------------------------ ket thuc ", final_sql)
             print("------------------------------ final_sql", final_sql)
             return {"query": final_sql}
         
