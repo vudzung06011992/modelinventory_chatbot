@@ -419,7 +419,7 @@ if st.button("Send"):
                 print("text truoc khi extract", text)
                 print("end")
                 """Trích xuất câu SQL từ nội dung chứa 'Final Answer:'"""
-                st.write("------------------------------ text la  ", text)
+                
                 if "Action Input: " in text:   
                     _, _, result = text.rpartition("Action Input: ")
                     result =  result
@@ -476,7 +476,9 @@ if st.button("Send"):
 
         ################
         print("-------------------------Kết quả bước 2, Câu lệnh là :-------------------------", result_3["query"])
-        st.write("**Câu lệnh truy vấn dữ liệu**: ", result_3["query"])
+        import deepcopy
+        d = copy.deepcopy(result_3["query"])
+        st.write("**Câu lệnh truy vấn dữ liệu**: ", d)
         # st.write("**Kết quả truy vấn**: ", result_4["result"])
         st.dataframe(result_4["result"])
 
