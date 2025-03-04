@@ -42,35 +42,59 @@ memory = ConversationBufferMemory(memory_key="chat_history", return_messages=Tru
 # Hàm truy vấn dữ liệu từ Supabase
 from functools import lru_cache
 
-@lru_cache(maxsize=100) 
-def cached_clarify_question(query, chat_history_str):
-    chat_history = json.loads(chat_history_str) if chat_history_str else []
-
+def clarify_question(query, chat_history, llm_model):
     def remove_curly_braces(text):
         return text.replace("{", "").replace("}", "")
     
-    context = "\n".join([f"Câu hỏi User: {chat['user']} ==> Bot hiểu yêu cầu như sau: {remove_curly_braces(chat['bot'])}" \
-                         for chat in chat_history])
-    print("== LỊCH SỬ CONTEXT: == \n", context)
-    system = DB_SCHEMA_DESCRIPTION \
-    + """You are a DB assistant. Dựa trên hội thoại trước: """ + context \
-    + """Với câu hỏi hiện tại của User: {question}. """ \
-    + """ 
-    Bạn là chuyên viên phòng mô hình.
-    Bạn là người cẩn thận, chính xác. 
+    context = ""
+    previous_query = None
+    previous_bot_response = None
+    if chat_history:
+        for chat in reversed(chat_history):
+            context += f"Câu hỏi User: {chat['user']} ==> Bot trả lời: {remove_curly_braces(chat['bot'])}\n"
+            if previous_query is None: 
+                previous_query = chat['user']
+                previous_bot_response = chat['bot']
+    
+    system = DB_SCHEMA_DESCRIPTION + """
+    You are a DB assistant. Bạn là chuyên viên phòng mô hình, cẩn thận và chính xác.
+    Dựa trên hội thoại trước:
+    {context}
+    Với câu hỏi hiện tại của User: {question}.
+    
     Nhiệm vụ của bạn là:
-    - Hãy diễn giải rõ ràng, chính xác yêu cầu của người dùng hiện tại (HÃY NHỚ RẰNG: những gì bạn không chắc chắn, đừng cho vào, đừng diễn giải, Không ghi cụ thể tên trường dữ liệu, không tóm tắt)
-    - Các bảng dữ liệu cần dùng (bắt buộc phải có GSTD_Model Development). Nếu có đề cập tới phân loại theo loại 1, loại 2 hay loại 3 thì phải thêm bảng GSTD_Model Validation vào.  Nếu đề cập phân loại theo Cao, Thấp, Trung bình thì thêm bảng GSTD_Model Risk Rating vào.
-    Kết quả cần trả ra là json có key là clarified_question và tables."""
-
-    human = "{question}"
+    - Diễn giải rõ ràng, chính xác yêu cầu của người dùng hiện tại dựa trên ngữ cảnh hội thoại trước.
+    - Nếu câu hỏi hiện tại yêu cầu "làm rõ hơn" hoặc "sửa lỗi", hãy kết hợp với câu hỏi trước để làm rõ ý định đầy đủ.
+    - Nếu câu hỏi trước có câu lệnh SQL sai (trong phản hồi của bot), hãy ghi nhận lỗi đó và đảm bảo yêu cầu mới tránh lỗi tương tự.
+    - Không đoán mò hoặc thêm thông tin không chắc chắn. Không ghi cụ thể tên trường dữ liệu, không tóm tắt quá mức.
+    - Các bảng dữ liệu cần dùng: bắt buộc có "GSTD_Model Development". Nếu có phân loại theo loại 1, loại 2, loại 3 thì thêm "GSTD_Model Validation". Nếu có phân loại theo Cao, Thấp, Trung bình thì thêm "GSTD_Model Risk Rating".
+    
+    Kết quả trả ra là JSON với 2 key:
+    - "clarified_question": Yêu cầu đã được làm rõ, kết hợp ngữ cảnh nếu cần.
+    - "tables": Danh sách các bảng cần dùng.
+    """
+    
+    if "làm rõ hơn" in query.lower() and previous_query:
+        human = f"Yêu cầu làm rõ hơn thông tin từ câu hỏi trước: '{previous_query}'. Câu hỏi hiện tại: {query}"
+    elif "sai rồi" in query.lower() and previous_bot_response and "SELECT" in previous_bot_response:
+        human = f"Yêu cầu sửa lỗi từ câu hỏi trước: '{previous_query}' với câu lệnh SQL trước đó: '{previous_bot_response}'. Câu hỏi hiện tại: {query}"
+    else:
+        human = "{question}"
+    
     prompt = ChatPromptTemplate.from_messages([
-        ("system", system), ("human", human)
+        ("system", system),
+        ("human", human)
     ])
 
-    chain = prompt | claude  # Sử dụng claude trực tiếp vì llm_model_name chỉ để log
-    tmp = chain.invoke({"question": query})  
-    return tmp.content
+    chain = prompt | llm_model
+    tmp = chain.invoke({
+        "context": context,
+        "question": query
+    })
+    result = tmp.content
+    
+    return result
+
 
 # Giao diện Streamlit
 st.title("Model-Inventory AI Chatbot")
@@ -90,7 +114,7 @@ if st.button("Send"):
         memory.save_context({"input": user_input}, {"output": ""})
 
         ################ I. Thực thi query SQL từ AI với ngữ cảnh hội thoại ################
-        result_1 = cached_clarify_question(user_input, st.session_state.chat_history)
+        result_1 = clarify_question(user_input, st.session_state.chat_history, claude)
     
         print("-------------------------Kết quả bước 1: -------------------------\n", result_1)
 
