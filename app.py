@@ -491,6 +491,13 @@ if st.button("Send"):
             )
             response = model.invoke(prompt)
             return response.content
+        result_4_copy = result_4.copy(deep=True)
+        print("---------type result_4_copy is ", result_4_copy)
+        import pandas as pd
+        t = pd.DataFrame(result_4_copy)
+        st.dataframe(t)
+        # Hiển thị bảng
+
 
         result_5 = generate_answer({"question":clarified_question, "result": result_4 }, openai)
         print("-------------------------Kết quả bước 5, final answer :-------------------------", result_5)
