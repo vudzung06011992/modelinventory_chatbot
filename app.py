@@ -376,6 +376,8 @@ if st.button("Send"):
                     NONREVOL còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
                     NONREVOLVING còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
                     I9 = IFRS9 => RegulatoryCompliance
+                    Cho vay tuần hoàn = Cho vay hạn mức => ModelSegmentation
+                    Cho vay không tuần hoàn = Cho vay từng lần => ModelSegmentation
                     ------------------------------------
                     Lưu ý:
                     - TÊN CÁC BẢNG, CỘT PHẢI ĐỂ TRONG ""
