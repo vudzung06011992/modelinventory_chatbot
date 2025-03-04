@@ -500,17 +500,18 @@ if st.button("Send"):
             )
             response = model.invoke(prompt)
             return response.content
-        result_4_copy = result_4.copy(deep=True)
-        print("---------type result_4_copy is ", result_4_copy)
+        result_4_copy = copy.deepcopy(result_4)
         import pandas as pd
-        t = pd.DataFrame(result_4_copy)
-        st.dataframe(t)
+        
+        st.write("**Phản hồi của Chatbot**: ")
+        st.dataframe(pd.DataFrame(result_4_copy))
+        
         # Hiển thị bảng
 
 
-        result_5 = generate_answer({"question":clarified_question, "result": result_4 }, openai)
-        print("-------------------------Kết quả bước 5, final answer :-------------------------", result_5)
-        st.write("**Phản hồi của Chatbot**: ", result_5)
+        # result_5 = generate_answer({"question":clarified_question, "result": result_4 }, openai)
+        # print("-------------------------Kết quả bước 5, final answer :-------------------------", result_5)
+        
 
 
     # VI. Hiển thị:
@@ -521,19 +522,19 @@ if st.button("Send"):
     # response_text = remove_newlines(response_text)
     st.write("\n Thời gian thực thi: ", time.time() - start_time)
     
-    def summarize_query(db_query, model):
-        """mô tả các điều kiện where trong câu lệnh"""
-        prompt = (
-            """
-            Dựa vào câu query, hãy mô tả ngắn gọn nhưng vẫn đủ các ý phạm vi lấy dữ liệu (các điều kiện where)
-            Query: {}            
+    # def summarize_query(db_query, model):
+    #     """mô tả các điều kiện where trong câu lệnh"""
+    #     prompt = (
+    #         """
+    #         Dựa vào câu query, hãy mô tả ngắn gọn nhưng vẫn đủ các ý phạm vi lấy dữ liệu (các điều kiện where)
+    #         Query: {}            
 
-            """.format(db_query)
-        )
-        response = model.invoke(prompt)
-        return response.content
+    #         """.format(db_query)
+    #     )
+    #     response = model.invoke(prompt)
+    #     return response.content
  
-    summarized_where_query = summarize_query(result_3["query"], openai)
+    # summarized_where_query = summarize_query(result_3["query"], openai)
     st.session_state.chat_history.append({"user": user_input, \
                                                                 "bot": "Phản hồi của Chatbot: " + result_3["query"]})
 
