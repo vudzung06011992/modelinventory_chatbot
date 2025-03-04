@@ -425,7 +425,8 @@ if st.button("Send"):
                 if "Final Answer:" in result:
                     _, _, result = result.rpartition("Final Answer: ")
                     result =  result.strip()
-
+                if "Observation" in result:
+                    result = result.split("Observation")[0].strip()
                 return result
 
             final_sql = extract_sql_from_final_answer(answer["messages"][1].content)
