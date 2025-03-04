@@ -33,7 +33,7 @@ print("kết nối db thành công")
 # Cấu hình LLM
 from langchain_community.chat_models import ChatOpenAI
 openai = ChatOpenAI(model_name="gpt-4")
-claude = init_chat_model("claude-3-5-sonnet-20241022", temperature=0.2)
+claude = init_chat_model("claude-3-5-sonnet-20241022", temperature=0.5)
 
 # Tạo bộ nhớ hội thoại
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, k = 5)
@@ -51,6 +51,8 @@ def clarify_question(query, chat_history, llm_model):
     + """You are a DB assistant. Dựa trên hội thoại trước: """ + context \
     + """Với câu hỏi hiện tại của User: {question}. """ \
     + """ 
+    Bạn là chuyên viên phòng mô hình.
+    Bạn là người cẩn thận, chính xác. 
     Nhiệm vụ của bạn là:
     - Hãy diễn giải rõ ràng, chính xác yêu cầu của người dùng hiện tại (HÃY NHỚ RẰNG: những gì bạn không chắc chắn, đừng cho vào, đừng diễn giải, Không ghi cụ thể tên trường dữ liệu, không tóm tắt)
     - Các bảng dữ liệu cần dùng (bắt buộc phải có GSTD_Model Development). Nếu có đề cập tới phân loại theo loại 1, loại 2 hay loại 3 thì phải thêm bảng GSTD_Model Validation vào.  Nếu đề cập phân loại theo Cao, Thấp, Trung bình thì thêm bảng GSTD_Model Risk Rating vào.
@@ -141,6 +143,8 @@ if st.button("Send"):
 
             prompt = PromptTemplate.from_template(
                 (TERM_DES_JSON + """
+                    Bạn là chuyên viên phòng mô hình.
+                    Bạn là người cẩn thận, chính xác.       
                     Bạn nhận được thông tin các bảng dữ liệu, các trường dữ liệu liên quan là {input}. 
                     Bạn hãy xây dựng câu lệnh query {dialect} cho phù hợp với yêu cầu người dùng. 
                     You have access to the following tools:{tools}
@@ -397,7 +401,7 @@ if st.button("Send"):
                     Action: the action to take, should be one of {tools}
                     Action Input: the input to the action
                     Observation: the result of the action
-                    ... (this Thought/Action/Action Input/Observation can repeat N times)
+                    ... (this Thought/Action/Action Input/Observation can repeat 2 times)
                     Thought: I now know the final answer
                     Final Answer: the final answer to the original input question. final answer chỉ là mã lập trình, không được có thêm gì khác. final answer chỉ là mã lập trình, không được có thêm gì khác. 
                     
@@ -474,7 +478,6 @@ if st.button("Send"):
                     st.error(f"Không thể tạo câu truy vấn hợp lệ sau {max_attempts} lần thử. Lỗi cuối cùng: {error_message}")
                     flag_fail = 1
                     break  # Dừng vòng lặp ngay
-
                 attempt += 1
         # If we've exhausted all attempts
 
