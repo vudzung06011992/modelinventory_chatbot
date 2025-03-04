@@ -18,6 +18,7 @@ from langchain.schema import HumanMessage
 from langchain_community.tools.sql_database.tool import QuerySQLDatabaseTool
 from langgraph.prebuilt import create_react_agent
 import pandas as pd
+from langchain_community.tools.sql_database.tool import QuerySQLCheckerTool
 
 # Load SQL query system prompt
 query_prompt_template = hub.pull("langchain-ai/sql-query-system-prompt")
@@ -60,8 +61,8 @@ def clarify_question(query, chat_history, llm_model):
 
     human = "{question}"
     prompt = ChatPromptTemplate.from_messages([
-                                                                                ("system", system), ("human", human)
-                                                                            ])
+        ("system", system), ("human", human)
+    ])
 
     chain = prompt | llm_model
     tmp = chain.invoke(
@@ -456,6 +457,30 @@ if st.button("Send"):
 
             # return {"result": execute_query_tool.invoke(state["query"])}
             return {"result": pd.DataFrame(db._execute(state["query"]))}
+        
+        # --------------------------------------------------- fix -----------------------------------------------------------
+        def fix_query(query, error_massge, llm_model, info_dict):
+            fix_prompt = PromptTemplate.from_template(
+                """
+                    Bạn là chuyên gia SQL. Một câu truy vấn sau đây đã gặp lỗi:
+                    Query: {query}
+                    Lỗi: {error_message}
+                    
+                    Dựa trên thông tin ngữ cảnh: {input}
+                    Hãy sửa lại câu truy vấn để nó chạy được trên PostgreSQL (Supabase).
+                    Chỉ trả ra câu truy vấn đã sửa, không giải thích.
+                """
+            )
+
+            chain = fix_prompt | llm_model
+            fixed_query = chain.invoke({
+                "query": query,
+                "error_message": error_message,
+                "input": info_dict["input"]
+            }).content
+            return fixed_query
+        
+        checker_tool = QuerySQLCheckerTool(db=db)
 
         # Tạo query và execute
         attempt = 0
@@ -464,26 +489,49 @@ if st.button("Send"):
         info_dict["previous_error"] = ""
         flag_fail = 0
         while attempt <= max_attempts:
-            result_3 = write_query(claude, info_dict)                
-            
+            result_3 = write_query(claude, info_dict)
+            query = result_3["query"]
+            print(f"-------Query ban đầu (attempt {attempt})---------------------------------------: {query}")
+            check_result = checker_tool.invoke(query)
+            print(f"-------Kết quả kiểm tra---------------------------------------: {check_result}")
+            if "Error" not in check_result and "invalid" not in check_result.lower():
+                try:
+                    result_4 = execute_query(result_3)
+                    print(f"-------Query thành công---------------------------------------: {query}")
+                    break 
+                except Exception as e:
+                    error_message = str(e)
+                    print(f"******QUERY ERROR (attempt {attempt}): {error_message}")
+                    query = fix_query(query, error_message, claude, info_dict)
+                    info_dict["previous_error"] = f"Lỗi trước đó: {error_message}. Query đã sửa: {query}"
+            else:
+                error_message = check_result
+                print(f"******CHECKER ERROR (attempt {attempt}): {error_message}")
+                query = fix_query(query, error_message, claude, info_dict)
+                info_dict["previous_error"] = f"Lỗi cú pháp trước đó: {error_message}. Query đã sửa: {query}"
+            result_3["query"] = query
             try:
-                # Execute query
-                print("-------result_3 trước khi chạy --------------------------------------- ", result_3)
                 result_4 = execute_query(result_3)
-                break  # Nếu thành công, thoát khỏi vòng lặp
+                print(f"-------Query đã sửa thành công---------------------------------------: {query}")
+                break 
             except Exception as e:
                 error_message = str(e)
-                print(f"******QUERY ERROR (attempt {attempt}): Việc tạo Query xuất hiện lỗi: {error_message}")
-                # st.write(f"QUERY ERROR (attempt {attempt}): Việc tạo Query xuất hiện lỗi: {error_message}")
+                print(f"******QUERY ERROR SAU SỬA (attempt {attempt}): {error_message}")
+                info_dict["previous_error"] = f"Lỗi sau khi sửa: {error_message}. Query: {query}"
                 
-                # Update info_dict with error information for better context
-                info_dict["previous_error"] = "Hãy phân tích để phát hiện lỗi và tránh lỗi từ truy vấn sau: " + result_3["query"] + ". Câu truy vấn này đã gặp lỗi: " + error_message
                 if attempt == max_attempts:
                     st.error(f"Không thể tạo câu truy vấn hợp lệ sau {max_attempts} lần thử. Lỗi cuối cùng: {error_message}")
                     flag_fail = 1
-                    break  # Dừng vòng lặp ngay
+                    break 
                 attempt += 1
-        # If we've exhausted all attempts
+
+        # Kết quả sau vòng lặp
+        if flag_fail == 0:
+            st.write("**Câu lệnh truy vấn dữ liệu**: ", result_3["query"])
+            st.dataframe(result_4["result"])
+        else:
+            st.write("**Phản hồi của Chatbot**: Tôi không tìm thấy được nội dung bạn yêu cầu, bạn có thể làm rõ hơn câu hỏi được không?")
+        # ---------------------------------------------fix----------------------------------------------------------------------------------
 
         ################
         print("-------------------------Kết quả bước 2, Câu lệnh là :-------------------------", result_3["query"])
