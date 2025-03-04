@@ -431,8 +431,6 @@ if st.button("Send"):
                 return result
 
             final_sql = extract_sql_from_final_answer(answer["messages"][1].content)
-            st.write("------------------------------ final_sql bat dau ", final_sql)
-            st.write("------------------------------ ket thuc ", final_sql)
             print("------------------------------ final_sql", final_sql)
             return {"query": final_sql}
         
@@ -449,9 +447,10 @@ if st.button("Send"):
 
         while attempt <= max_attempts:
             result_3 = write_query(claude, info_dict)                
-            print("-------result_3 là ", result_3)
+            
             try:
                 # Execute query
+                print("-------result_3 trước khi chạy --------------------------------------- ", result_3)
                 result_4 = execute_query(result_3)
                 break  # Nếu thành công, thoát khỏi vòng lặp
             except Exception as e:
