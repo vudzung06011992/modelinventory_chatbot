@@ -88,13 +88,16 @@ if st.button("Send"):
 
         ################ I. Thực thi query SQL từ AI với ngữ cảnh hội thoại ################
         result_1 = clarify_question(user_input, st.session_state.chat_history, claude)
-        
+    
         print("-------------------------Kết quả bước 1: -------------------------\n", result_1)
 
         # tách thông tin từ kết quả trả về
         if isinstance(result_1, dict):
             print("result_1 đã là dictionary, không cần json.loads()")
         else:
+            import re
+            match = re.search(r'\{.*\}', result_1, re.DOTALL)
+            result_1 = match.group(0)
             result_1 = result_1.replace("\n", "  ")
             result_1 = json.loads(result_1)
 
