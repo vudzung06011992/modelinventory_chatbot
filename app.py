@@ -418,7 +418,7 @@ if st.button("Send"):
             def extract_sql_from_final_answer(text):
 
                 """Trích xuất câu SQL từ nội dung chứa 'Final Answer:'"""
-                 st.write("------------------------------ text la  ", text)
+                st.write("------------------------------ text la  ", text)
                 if "Action Input: " in text:   
                     _, _, result = text.rpartition("Action Input: ")
                     result =  result.strip()
