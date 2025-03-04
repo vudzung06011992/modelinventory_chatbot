@@ -480,7 +480,7 @@ if st.button("Send"):
 
         ################
         print("-------------------------Kết quả bước 2, Câu lệnh là :-------------------------", result_3["query"])
-        if flag_fail = 0:        
+        if flag_fail == 0:        
             query_copy = copy.deepcopy(result_3["query"])
             st.write("**Câu lệnh truy vấn dữ liệu**: ", query_copy)
             st.dataframe(result_4["result"])
