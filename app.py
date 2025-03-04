@@ -423,6 +423,7 @@ if st.button("Send"):
                     return text.split(keyword, 1)[1].strip()
                 if "Action Input: " in text:   
                     _, _, result = text.rpartition("Action Input: ")
+                    print("extract_sql_from_final_answer extract_sql_from_final_answer: ", result)
                     return result.strip()
                 return text
 
