@@ -416,8 +416,9 @@ if st.button("Send"):
             answer = agent_executor.invoke({"messages": [{"role": "user", "content": info_dict["question"]}]})
 
             def extract_sql_from_final_answer(text):
+
                 """Trích xuất câu SQL từ nội dung chứa 'Final Answer:'"""
-                print("debug: text là ", text)
+                 st.write("------------------------------ text la  ", text)
                 if "Action Input: " in text:   
                     _, _, result = text.rpartition("Action Input: ")
                     result =  result.strip()
