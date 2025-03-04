@@ -49,9 +49,10 @@ def clarify_question(query, chat_history, llm_model):
     context = ""
     previous_query = None
     previous_bot_response = None
+
     if chat_history:
         for chat in reversed(chat_history):
-            context += f"Câu hỏi User: {chat['user']} ==> Bot trả lời: {remove_curly_braces(chat['bot'])}\n"
+            context += f" Câu hỏi User: {chat['user']} ==> Bot trả lời: {remove_curly_braces(chat['bot'])} \n"
             if previous_query is None: 
                 previous_query = chat['user']
                 previous_bot_response = chat['bot']
@@ -504,7 +505,7 @@ if st.button("Send"):
             }).content
             return fixed_query
         
-        checker_tool = QuerySQLCheckerTool(db=db)
+        checker_tool = QuerySQLCheckerTool(db=db, llm=claude)
 
         # Tạo query và execute
         attempt = 0
