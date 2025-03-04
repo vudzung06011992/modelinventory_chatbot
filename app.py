@@ -418,16 +418,18 @@ if st.button("Send"):
             def extract_sql_from_final_answer(text):
                 """Trích xuất câu SQL từ nội dung chứa 'Final Answer:'"""
                 print("debug: text là ", text)
-                keyword = "Final Answer:"
-                if keyword in text:
-                    return text.split(keyword, 1)[1].strip()
                 if "Action Input: " in text:   
                     _, _, result = text.rpartition("Action Input: ")
                     print("extract_sql_from_final_answer extract_sql_from_final_answer: ", result)
                     return result.strip()
-                return text
 
-            return {"query": extract_sql_from_final_answer(answer["messages"][1].content)}
+                if "Final Answer:" in text:
+                    return text.split("Final Answer:", 1)[1].strip()
+                
+                return text
+            final_sql = extract_sql_from_final_answer(answer["messages"][1].content)
+            print("------------------------------ final_sql", final_sql)
+            return {"query": final_sql}
         
         def execute_query(state):
             """Execute SQL query."""
