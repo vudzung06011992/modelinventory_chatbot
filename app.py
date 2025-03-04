@@ -65,7 +65,7 @@ def clarify_question(query, chat_history, llm_model):
     tmp = chain.invoke(
         {
             "question": query
-        })  
+        }, temperature=0.3)  
 
     return tmp.content
 
@@ -417,7 +417,7 @@ if st.button("Send"):
 
             # Tạo Agent Executor (Dùng Prompt ĐÃ FORMAT)
             agent_executor = create_react_agent(llm_model, tools, prompt=formatted_prompt)
-            answer = agent_executor.invoke({"messages": [{"role": "user", "content": info_dict["question"]}]})
+            answer = agent_executor.invoke({"messages": [{"role": "user", "content": info_dict["question"]}]}, temperature=0.2)
 
             def extract_sql_from_final_answer(text):
                 print("text truoc khi extract", text)
