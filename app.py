@@ -6,9 +6,10 @@ import warnings
 from typing import TypedDict, Annotated, List
 
 import streamlit as st
-
+import copy
 from ultis import *
-
+from langchain_community.agent_toolkits import SQLDatabaseToolkit
+from typing_extensions import Annotated
 # from langchain.chat_models import ChatOpenAI, init_chat_model
 from langchain.memory import ConversationBufferMemory
 from langchain.sql_database import SQLDatabase
@@ -16,6 +17,7 @@ from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
 from langchain.schema import HumanMessage
 from langchain_community.tools.sql_database.tool import QuerySQLDatabaseTool
 from langgraph.prebuilt import create_react_agent
+import pandas as pd
 
 # Load SQL query system prompt
 query_prompt_template = hub.pull("langchain-ai/sql-query-system-prompt")
@@ -30,8 +32,6 @@ print("kết nối db thành công")
 
 # Cấu hình LLM
 from langchain_community.chat_models import ChatOpenAI
-# claude = ChatAnthropic(model="claude-3-5-sonnet-20241022", temperature=0.7)
-# openai = init_chat_model("gpt-4")
 openai = ChatOpenAI(model_name="gpt-4")
 claude = init_chat_model("claude-3-5-sonnet-20241022")
 
@@ -130,8 +130,7 @@ if st.button("Send"):
         }
 
         ################# III: xây dựng câu lệnh query ################
-        from langchain_community.agent_toolkits import SQLDatabaseToolkit
-        from typing_extensions import Annotated
+        
         toolkit = SQLDatabaseToolkit(db=db, llm=claude)
         tools = toolkit.get_tools()
 
@@ -372,6 +371,7 @@ if st.button("Send"):
                     NONR còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
                     NONREVOL còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
                     NONREVOLVING còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
+                    I9 = IFRS9 => RegulatoryCompliance
                     ------------------------------------
                     Lưu ý:
                     - TÊN CÁC BẢNG, CỘT PHẢI ĐỂ TRONG ""
@@ -422,6 +422,7 @@ if st.button("Send"):
             def extract_sql_from_final_answer(text):
                 print("text truoc khi extract", text)
                 print("end")
+                
                 """Trích xuất câu SQL từ nội dung chứa 'Final Answer:'"""
                 
                 if "Action Input: " in text:   
@@ -442,7 +443,6 @@ if st.button("Send"):
             """Execute SQL query."""
             print("Câu lệnh để query là ", state["query"])
 
-            import pandas as pd
             db = SQLDatabase.from_uri(SUPABASE_URI)
             
 
@@ -452,9 +452,9 @@ if st.button("Send"):
         # Tạo query và execute
         attempt = 0
         error_message = None
-        max_attempts = 5
+        max_attempts = 3
         info_dict["previous_error"] = ""
-
+        flag_fail = 0
         while attempt <= max_attempts:
             result_3 = write_query(claude, info_dict)                
             
@@ -472,73 +472,34 @@ if st.button("Send"):
                 info_dict["previous_error"] = "Hãy phân tích để phát hiện lỗi và tránh lỗi từ truy vấn sau: " + result_3["query"] + ". Câu truy vấn này đã gặp lỗi: " + error_message
                 if attempt == max_attempts:
                     st.error(f"Không thể tạo câu truy vấn hợp lệ sau {max_attempts} lần thử. Lỗi cuối cùng: {error_message}")
+                    flag_fail = 1
                     break  # Dừng vòng lặp ngay
 
                 attempt += 1
         # If we've exhausted all attempts
-        
 
         ################
         print("-------------------------Kết quả bước 2, Câu lệnh là :-------------------------", result_3["query"])
-        import copy
-        query_copy = copy.deepcopy(result_3["query"])
-        st.write("**Câu lệnh truy vấn dữ liệu**: ", query_copy)
-        # st.write("**Kết quả truy vấn**: ", result_4["result"])
-        st.dataframe(result_4["result"])
+        if flag_fail = 0:        
+            query_copy = copy.deepcopy(result_3["query"])
+            st.write("**Câu lệnh truy vấn dữ liệu**: ", query_copy)
+            st.dataframe(result_4["result"])
 
-        # V. Trả lời
-        def generate_answer(state, model):
-            """Answer question using retrieved information as context."""
-            prompt = (
-                """
-                Given the following user question, corresponding query, 
-                and db retrieval result, answer the user question.\n\n
-                Question: {}
-
-                Result provided: {}
-
-                Câu trả lời cần liệt kê các thông tin liên quan tới định danh như DevelopmentID (không được cắt, bỏ thông tin)
-                Trình bày đẹp, bỏ các ký tự \n đi
-                """.format(state["question"], state["result"])
-            )
-            response = model.invoke(prompt)
-            return response.content
-        
-        result_4_copy = copy.deepcopy(result_4["result"])
-        import pandas as pd
-        
-        st.write("**Phản hồi của Chatbot**: ")
-        st.dataframe(pd.DataFrame(result_4_copy))
-        
-        # Hiển thị bảng
-
-
-        # result_5 = generate_answer({"question":clarified_question, "result": result_4 }, openai)
-        # print("-------------------------Kết quả bước 5, final answer :-------------------------", result_5)
-        
+            result_4_copy = copy.deepcopy(result_4["result"])
+            import pandas as pd
+            
+            st.write("**Phản hồi của Chatbot**: ")
+            st.dataframe(pd.DataFrame(result_4_copy))
+        else:
+            st.write("**Phản hồi của Chatbot**: Tôi không tìm thấy được nội dung bạn yêu cầu, bạn có thể làm rõ hơn câu hỏi được không?")
 
 
     # VI. Hiển thị:
     def remove_newlines(text):
         return text.replace("\n", "")
 
-    # response_text = "1. Câu hỏi làm rõ: " + clarified_question +  "----" +  "\n 2. Câu lệnh query: " + result_3["query"] +  "----" +  "\n 3. Kết quả:  " + str(result_5)
-    # response_text = remove_newlines(response_text)
     st.write("\n Thời gian thực thi: ", time.time() - start_time)
-    
-    # def summarize_query(db_query, model):
-    #     """mô tả các điều kiện where trong câu lệnh"""
-    #     prompt = (
-    #         """
-    #         Dựa vào câu query, hãy mô tả ngắn gọn nhưng vẫn đủ các ý phạm vi lấy dữ liệu (các điều kiện where)
-    #         Query: {}            
 
-    #         """.format(db_query)
-    #     )
-    #     response = model.invoke(prompt)
-    #     return response.content
- 
-    # summarized_where_query = summarize_query(result_3["query"], openai)
     st.session_state.chat_history.append({"user": user_input, \
                                                                 "bot": "Phản hồi của Chatbot: " + result_3["query"]})
 
