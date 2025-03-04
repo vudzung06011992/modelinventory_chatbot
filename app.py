@@ -501,7 +501,8 @@ if st.button("Send"):
             )
             response = model.invoke(prompt)
             return response.content
-        result_4_copy = copy.deepcopy(result_4)
+        
+        result_4_copy = copy.deepcopy(result_4["result"])
         import pandas as pd
         
         st.write("**Phản hồi của Chatbot**: ")
