@@ -415,8 +415,9 @@ if st.button("Send"):
             agent_executor = create_react_agent(llm_model, tools, prompt=formatted_prompt)
             answer = agent_executor.invoke({"messages": [{"role": "user", "content": info_dict["question"]}]})
 
-            def extract_sql_from_final_answer(text)
+            def extract_sql_from_final_answer(text):
                 print("text truoc khi extract", text)
+                print("end")
                 """Trích xuất câu SQL từ nội dung chứa 'Final Answer:'"""
                 st.write("------------------------------ text la  ", text)
                 if "Action Input: " in text:   
