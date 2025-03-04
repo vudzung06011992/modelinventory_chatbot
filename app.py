@@ -466,7 +466,7 @@ if st.button("Send"):
             except Exception as e:
                 error_message = str(e)
                 print(f"******QUERY ERROR (attempt {attempt}): Việc tạo Query xuất hiện lỗi: {error_message}")
-                st.write(f"QUERY ERROR (attempt {attempt}): Việc tạo Query xuất hiện lỗi: {error_message}")
+                # st.write(f"QUERY ERROR (attempt {attempt}): Việc tạo Query xuất hiện lỗi: {error_message}")
                 
                 # Update info_dict with error information for better context
                 info_dict["previous_error"] = "Hãy phân tích để phát hiện lỗi và tránh lỗi từ truy vấn sau: " + result_3["query"] + ". Câu truy vấn này đã gặp lỗi: " + error_message
@@ -480,9 +480,9 @@ if st.button("Send"):
 
         ################
         print("-------------------------Kết quả bước 2, Câu lệnh là :-------------------------", result_3["query"])
-        import deepcopy
-        d = copy.deepcopy(result_3["query"])
-        st.write("**Câu lệnh truy vấn dữ liệu**: ", d)
+        import copy
+        query_copy = copy.deepcopy(result_3["query"])
+        st.write("**Câu lệnh truy vấn dữ liệu**: ", query_copy)
         # st.write("**Kết quả truy vấn**: ", result_4["result"])
         st.dataframe(result_4["result"])
 
@@ -498,7 +498,6 @@ if st.button("Send"):
                 Result provided: {}
 
                 Câu trả lời cần liệt kê các thông tin liên quan tới định danh như DevelopmentID (không được cắt, bỏ thông tin)
-                
                 Trình bày đẹp, bỏ các ký tự \n đi
                 """.format(state["question"], state["result"])
             )
