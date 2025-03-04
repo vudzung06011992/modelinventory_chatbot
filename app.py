@@ -420,15 +420,13 @@ if st.button("Send"):
                 print("debug: text là ", text)
                 if "Action Input: " in text:   
                     _, _, result = text.rpartition("Action Input: ")
-                    print("extract_sql_from_final_answer extract_sql_from_final_answer: ", result)
-                    return result.strip()
+                    result =  result.strip()
+                if "Final Answer:" in result:
+                    _, _, result = result.rpartition("Final Answer: ")
+                    result =  result.strip()
 
-                if "Final Answer:" in text:
-                    _, _, result = text.rpartition("Final Answer: ")
-                    print("extract_sql_from_final_answer extract_sql_from_final_answer: ", result)
-                    return result.strip()
+                return result
 
-                return text
             final_sql = extract_sql_from_final_answer(answer["messages"][1].content)
             st.write("------------------------------ final_sql bat dau ", final_sql)
             st.write("------------------------------ ket thuc ", final_sql)
