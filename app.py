@@ -125,7 +125,6 @@ def clarify_question(query, chat_history, llm_model):
         messages=messages,
         model="claude-3-7-sonnet-20250219",
         stream=False,
-        temperature=0.6,
         max_tokens=2000,
         extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
 # extra_headers={"anthropic-beta": "prompt-caching-2025-07-31"}
@@ -203,21 +202,16 @@ if st.button("Send"):
         from langgraph.prebuilt import create_react_agent
         info_dict["error"] = None
 
-        from anthropic import Anthropic, HUMAN_PROMPT, AI_PROMPT
-        anthropic_client = Anthropic(api_key="your-anthropic-api-key")
-
         def write_query(llm_model=anthropic_client, info_dict=None, error=None):
-            # System prompt là phần cố định để cache (bao gồm TERM_DES_JSON và hướng dẫn)
-            system_prompt = TERM_DES_JSON + """
-                            Bạn là chuyên viên phòng mô hình.
+
+            system_prompt = TERM_DES_JSON + TUDONGNGHIA + \
+                            """Bạn là chuyên viên phòng mô hình.
                             Bạn là người cẩn thận, chính xác.       
                             Bạn nhận được thông tin các bảng dữ liệu, các trường dữ liệu liên quan là {input}. 
-                            Bạn hãy xây dựng câu lệnh query {dialect} cho phù hợp với yêu cầu người dùng. 
+                            Bạn hãy xây dựng câu lệnh query PostgreSQL cho phù hợp với yêu cầu người dùng. 
                             You have access to the following tools:{tools}
-
-                            Bạn có danh sách các từ sau về thuật ngữ và các trường dữ liệu tương ứng để xây dựng query
                             """ \
-                            + TUDONGNGHIA + \
+                             + \
                             """
                             Lưu ý:
                             - TÊN CÁC BẢNG, CỘT PHẢI ĐỂ TRONG ""
@@ -231,7 +225,7 @@ if st.button("Send"):
                             - Các trường text, thực hiện lấy giá trị lowcase để thực hiện điều kiện lọc.
                             - Nếu chủ thể hỏi về mô hình, bạn phải liệt kê thông tin theo DevelopmentID (không phải theo Model ID): ví dụ 
                                 số lượng Mô Hình Bán Buôn Cho Doanh Nghiệp Vừa Theo Chuẩn Basel là 02 với DevelopmentID là 32, 33
-                            - {previous_error}
+                            - 
                             
                             Bạn chỉ được trả ra câu lệnh query (không thêm bất kỳ thông tin nào khác) mà phải chạy được. Only return the Query, no explanation, no description.
                             Ví dụ: 
@@ -246,38 +240,43 @@ if st.button("Send"):
                             ... (this Thought/Action/Action Input/Observation can repeat 2 times)
                             Thought: I now know the final answer
                             Final Answer: the final answer to the original input question. final answer chỉ là mã lập trình, không được có thêm gì khác. final answer chỉ là mã lập trình, không được có thêm gì khác. 
-                            Begin!
-                            Question: {question}
                         """
+            
+            context = info_dict.get("previous_error", "")
+            if context == "":
+                context = " Không có thông tin lỗi trước đó. "
+                
+            question = "Câu hỏi của người dùng hiện tại là: " + info_dict["question"]
 
             # Tạo messages với Prompt Caching
             messages = [
                 {
-                    "role": "system",
+                    "role": "user",
                     "content": [
                         {
                             "type": "text",
-                            "text": system_prompt.format(
-                                input=info_dict["input"],
-                                previous_error=info_dict.get("previous_error", ""),
-                                question=info_dict["question"]
-                            ),
+                            "text": system_prompt,
                             "cache_control": {"type": "ephemeral"}  # Cache system prompt
-                        }
+                        },
+                        {
+                            "type": "text",
+                            "text": context,
+                        },
+                        {
+                            "type": "text",
+                            "text": question,
+                        },
                     ]
                 },
-                {
-                    "role": "user",
-                    "content": user_input
-                }
             ]
 
             # Gọi API Anthropic với Prompt Caching
             response = llm_model.messages.create(
                 max_tokens=2000,
                 messages=messages,
-                model="claude-3-5-sonnet-20241022",
-                extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}  # Kích hoạt Prompt Caching
+                model="claude-3-7-sonnet",
+                extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"} , # Kích hoạt Prompt Caching
+                temperature = 0.5
             )
 
             # Trích xuất SQL từ phản hồi

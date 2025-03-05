@@ -253,6 +253,7 @@ TUDONGNGHIA = """
                             ------------------------------------
 
 """
+
 SYSTEM_PROMPT_CONTEXT = """
 Bạn có các file excel/csv về mô hình và trường dữ liệu tương ứng như sau:
 
@@ -543,14 +544,6 @@ Thuật ngữ:
         -	KHDN: Nhóm phân khúc khách hàng doanh nhiệp (hay được gọi là bán buôn), RiskType_lv2 = RRTD bán buôn
         -	KHCN: Nhóm phân khúc khách hàng cá nhân (cũng hay được gọi là bán lẻ) , RiskType_lv2 = RRTD bán lẻ
         -	QLRRTH: tên phòng Quản lý rủi ro tích hợp
-        -	Các thuật ngữ viết tắt bạn cần nắm được:
-        o	RES đại diện cho vay bất động sản 
-        o	IBIZ đại diện cho vay sản xuất kinh doanh (SXKD)
-        o	CONS hoặc CSE: cho vay tiêu dùng có TSBĐ
-        o	UNSEC hoặc CUS cho vay tiêu dùng không có TSBĐ
-        o	CAR: cho vay mua ô tô, xe máy tiêu dùng
-        o	CC: thẻ tín dụng
-        o	OTH: cho vay khác
 
 """
 
