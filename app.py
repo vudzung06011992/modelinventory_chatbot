@@ -251,9 +251,9 @@ if st.button("Send"):
 
             # Gọi API Anthropic với Prompt Caching
             response = llm_model.messages.create(
-                model="claude-3-5-sonnet-20241022",
-                max_tokens=1000,
+                max_tokens=2000,
                 messages=messages,
+                model="claude-3-5-sonnet-20241022",
                 extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}  # Kích hoạt Prompt Caching
             )
 
