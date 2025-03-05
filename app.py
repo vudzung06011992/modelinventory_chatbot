@@ -188,7 +188,6 @@ if st.button("Send"):
         info_dict["error"] = None
 
         from anthropic import Anthropic, HUMAN_PROMPT, AI_PROMPT
-
         anthropic_client = Anthropic(api_key="your-anthropic-api-key")
 
         def write_query(llm_model=anthropic_client, info_dict=None, error=None):
@@ -326,7 +325,7 @@ if st.button("Send"):
         flag_fail = 0
         while attempt <= max_attempts:
             
-            result_3 = write_query(claude, info_dict)
+            result_3 = write_query(anthropic_client, info_dict)
             query = result_3["query"]
             print(f"-------Query ban đầu (attempt {attempt})---------------------------------------: {query}")
 
