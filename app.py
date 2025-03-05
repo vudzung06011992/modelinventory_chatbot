@@ -42,8 +42,8 @@ claude = init_chat_model("claude-3-5-sonnet-20241022", temperature=0.5)
 # Tạo bộ nhớ hội thoại
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, k = 5)
 
-from langchain_anthropic import ChatAnthropic
-anthropic_client = ChatAnthropic(
+from langchain_anthropic import Anthropic
+anthropic_client = Anthropic(
     model="claude-3-7-sonnet",
     temperature=0,
     extra_headers={"anthropic-beta": "prompt-caching-2025-07-31"})
