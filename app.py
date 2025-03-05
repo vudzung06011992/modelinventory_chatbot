@@ -274,7 +274,7 @@ if st.button("Send"):
             response = llm_model.messages.create(
                 max_tokens=2000,
                 messages=messages,
-                model="claude-3-7-sonnet",
+                model="claude-3-7-sonnet-20250219",
                 extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"} , # Kích hoạt Prompt Caching
                 temperature = 0.5
             )
