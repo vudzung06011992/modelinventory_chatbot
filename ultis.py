@@ -253,7 +253,7 @@ TUDONGNGHIA = """
                             ------------------------------------
 
 """
-DB_SCHEMA_DESCRIPTION = """
+SYSTEM_PROMPT_CONTEXT = """
 Bạn có các file excel/csv về mô hình và trường dữ liệu tương ứng như sau:
 
 - Bảng "GSTD_Model Inventory" chứa thông tin về tên, phân loại, phân khúc mô hình, mã định danh mô hình, gồm các trường:

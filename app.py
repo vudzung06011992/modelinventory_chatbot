@@ -25,6 +25,8 @@ query_prompt_template = hub.pull("langchain-ai/sql-query-system-prompt")
 assert len(query_prompt_template.messages) == 1
 
 warnings.filterwarnings("ignore")
+from functools import lru_cache
+from anthropic import Anthropic, HUMAN_PROMPT, AI_PROMPT
 
 # Cấu hình db
 db = SQLDatabase.from_uri(SUPABASE_URI)
@@ -38,11 +40,6 @@ claude = init_chat_model("claude-3-5-sonnet-20241022", temperature=0.5)
 
 # Tạo bộ nhớ hội thoại
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, k = 5)
-
-# Hàm truy vấn dữ liệu từ Supabase
-from functools import lru_cache
-
-from anthropic import Anthropic, HUMAN_PROMPT, AI_PROMPT
 anthropic_client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 def clarify_question(query, chat_history, llm_model):
@@ -61,12 +58,9 @@ def clarify_question(query, chat_history, llm_model):
                 previous_bot_response = chat['bot']
     
     # System prompt là phần cố định để cache
-    system = DB_SCHEMA_DESCRIPTION + """
-    Bạn là chuyên viên phòng mô hình, cẩn thận và chính xác.
-    Dựa trên hội thoại trước:
-    {context}
-    Với câu hỏi hiện tại của User: {question}.
-    
+    system_role_message = SYSTEM_PROMPT_CONTEXT + \
+    """
+    Bạn là chuyên viên phòng mô hình, cẩn thận và chính xác. Bạn đã có được thông tin về các bảng dữ liệu, thuật ngữ. 
     Nhiệm vụ của bạn là:
     - Diễn giải rõ ràng, chính xác yêu cầu của người dùng hiện tại dựa trên ngữ cảnh hội thoại trước.
     - Nếu câu hỏi hiện tại yêu cầu "làm rõ hơn" hoặc "sửa lỗi", hãy kết hợp với câu hỏi trước để làm rõ ý định đầy đủ.
@@ -77,7 +71,7 @@ def clarify_question(query, chat_history, llm_model):
     Kết quả trả ra là JSON với 2 key:
     - "clarified_question": Yêu cầu đã được làm rõ, kết hợp ngữ cảnh nếu cần.
     - "tables": Danh sách các bảng cần dùng.
-    """
+        """
 
     # Xác định human input dựa trên điều kiện
     if "làm rõ hơn" in query.lower() and previous_query:
@@ -88,36 +82,34 @@ def clarify_question(query, chat_history, llm_model):
         human = query
     
     # Tạo messages với Prompt Caching
-    messages = [
-        {
-            "role": "system",
-            "content": [
-                {
-                    "type": "text",
-                    "text": system.format(context=context, question=human),
-                    "cache_control": {"type": "ephemeral"}  # Cache system prompt
-                }
-            ]
-        },
-        {
-            "role": "user",
-            "content": human
-        }
-    ]
+    messages = {
+                        "role": "user",
+                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": system_role_message,
+                                                "cache_control": {"type": "ephemeral"}  # Cache system prompt
+                                            },
+                                            {
+                                                "type": "text",
+                                                "text": context
+                                            },
+                                            {   
+                                                "type": "text",
+                                                "text": human
+                                            },
+                                        ]
+                    }
 
     # Gọi API Anthropic với Prompt Caching
     response = llm_model.messages.create(
         model="claude-3-5-sonnet-20241022",
-        max_tokens=1000,
         messages=messages,
-        extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}  # Kích hoạt Prompt Caching
+        extra_headers={"anthropic-beta": "prompt-caching-2025-03-10"}  # Kích hoạt Prompt Caching
     )
 
-    # Trả về chuỗi trực tiếp, giống như tmp.content trong mã cũ
     result = response.content[0].text
     return result
-
-
 
 # Giao diện Streamlit
 st.title("Model-Inventory AI Chatbot")
