@@ -8,6 +8,7 @@ from typing import TypedDict, Annotated, List
 import streamlit as st
 import copy
 from ultis import *
+from ultis import SYSTEM_PROMPT_CONTEXT
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from typing_extensions import Annotated
 # from langchain.chat_models import ChatOpenAI, init_chat_model
