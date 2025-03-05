@@ -104,9 +104,10 @@ def clarify_question(query, chat_history, llm_model):
 
     # Gọi API Anthropic với Prompt Caching
     response = llm_model.messages.create(
-        model="claude-3-5-sonnet-20241022",
+        model="claude-3-5-sonnet",
         messages=messages,
-        extra_headers={"anthropic-beta": "prompt-caching-2025-03-10"}  # Kích hoạt Prompt Caching
+        extra_headers={"anthropic-beta": "prompt-caching-2025-03-10"}  # Kích hoạt Prompt Caching,
+        temperature=0.6
     )
 
     result = response.content[0].text
