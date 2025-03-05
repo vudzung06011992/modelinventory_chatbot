@@ -130,7 +130,7 @@ if st.button("Send"):
         memory.save_context({"input": user_input}, {"output": ""})
 
         ################ I. Thực thi query SQL từ AI với ngữ cảnh hội thoại ################
-        result_1 = clarify_question(user_input, st.session_state.chat_history, claude)
+        result_1 = clarify_question(user_input, st.session_state.chat_history, anthropic_client)
     
         print("-------------------------Kết quả bước 1: -------------------------\n", result_1)
 
