@@ -125,7 +125,7 @@ def clarify_question(query, chat_history, llm_model):
         messages=messages,
         model="claude-3-5-sonnet-20241022",
         stream=False,
-        # max_tokens=2000,
+        max_tokens=8000,
         extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
 # extra_headers={"anthropic-beta": "prompt-caching-2025-07-31"}
 
@@ -274,7 +274,7 @@ if st.button("Send"):
 
             # Gọi API Anthropic với Prompt Caching
             response = llm_model.messages.create(
-                # max_tokens=2000,
+                max_tokens=8000,
                 messages=messages,
                 model="claude-3-5-sonnet-20241022",
                 extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"} , # Kích hoạt Prompt Caching
