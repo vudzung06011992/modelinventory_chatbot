@@ -27,7 +27,7 @@ assert len(query_prompt_template.messages) == 1
 
 warnings.filterwarnings("ignore")
 from functools import lru_cache
-from anthropic import Anthropic, HUMAN_PROMPT, AI_PROMPT
+
 
 # Cấu hình db
 db = SQLDatabase.from_uri(SUPABASE_URI)
@@ -41,7 +41,13 @@ claude = init_chat_model("claude-3-5-sonnet-20241022", temperature=0.5)
 
 # Tạo bộ nhớ hội thoại
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, k = 5)
-anthropic_client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+
+from langchain_anthropic import ChatAnthropic
+anthropic_client = ChatAnthropic(
+    model="claude-3-7-sonnet",
+    temperature=0,
+    extra_headers={"anthropic-beta": "prompt-caching-2025-07-31"}
+
 
 def clarify_question(query, chat_history, llm_model):
 
@@ -104,10 +110,7 @@ def clarify_question(query, chat_history, llm_model):
 
     # Gọi API Anthropic với Prompt Caching
     response = llm_model.messages.create(
-        model="claude-3-5-sonnet",
         messages=messages,
-        extra_headers={"anthropic-beta": "prompt-caching-2025-03-10"},  # Kích hoạt Prompt Caching
-        temperature=0.6,
         stream=False
     )
 
