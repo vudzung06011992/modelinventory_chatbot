@@ -201,8 +201,8 @@ if st.button("Send"):
                             You have access to the following tools:{tools}
 
                             Bạn có danh sách các từ sau về thuật ngữ và các trường dữ liệu tương ứng để xây dựng query
-                            """
-                            + TUDONGNGHIA
+                            """ \
+                            + TUDONGNGHIA + \
                             """
                             Lưu ý:
                             - TÊN CÁC BẢNG, CỘT PHẢI ĐỂ TRONG ""
