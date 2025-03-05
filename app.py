@@ -107,7 +107,8 @@ def clarify_question(query, chat_history, llm_model):
         model="claude-3-5-sonnet",
         messages=messages,
         extra_headers={"anthropic-beta": "prompt-caching-2025-03-10"},  # Kích hoạt Prompt Caching
-        temperature=0.6
+        temperature=0.6,
+        stream=False
     )
 
     result = response.content[0].text
