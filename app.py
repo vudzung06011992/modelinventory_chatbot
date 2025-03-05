@@ -86,24 +86,25 @@ def clarify_question(query, chat_history, llm_model):
         human = query
     
     # Tạo messages với Prompt Caching
-    messages = {
-                        "role": "user",
-                        "content": [
-                                            {
-                                                "type": "text",
-                                                "text": system_role_message,
-                                                "cache_control": {"type": "ephemeral"}  # Cache system prompt
-                                            },
-                                            {
-                                                "type": "text",
-                                                "text": context
-                                            },
-                                            {   
-                                                "type": "text",
-                                                "text": human
-                                            }
-                                        ]
-                    }
+    messages = [
+    {
+        "role": "system",
+        "content": [
+            {
+                "type": "text",
+                "text": system_role_message,
+                "cache_control": {"type": "ephemeral"}  # Cache system prompt
+            }
+        ]
+    },
+    {
+        "role": "user",
+        "content": [
+            {"type": "text", "text": context},
+            {"type": "text", "text": human}
+        ]
+    }
+]
 
     # Gọi API Anthropic với Prompt Caching
     response = llm_model.messages.create(
