@@ -84,15 +84,15 @@ def clarify_question(query, chat_history, llm_model):
         human = f"Yêu cầu sửa lỗi từ câu hỏi trước: '{previous_query}' với câu lệnh SQL trước đó: '{previous_bot_response}'. Câu hỏi hiện tại: {query}"
     else:
         human = query
-    
+    assert type(context) == str
+    assert type(human) == str
     # Tạo messages với Prompt Caching
     messages = [{
                         "role": "user",
                         "content": [
                                             {
                                                 "type": "text",
-                                                "text": system_role_message,
-                                                "cache_control": {"type": "ephemeral"}  # Cache system prompt
+                                                "text": system_role_message
                                             },
                                             {
                                                 "type": "text",
@@ -108,10 +108,9 @@ def clarify_question(query, chat_history, llm_model):
     # Gọi API Anthropic với Prompt Caching
     response = llm_model.messages.create(
         messages=messages,
-        model="claude-3-7-sonnet",
+        model="claude-3-7-sonnet-20250219",
         stream=False,
-temperature=0.6,
-max_tokens = 2000
+        temperature=0.6
 # extra_headers={"anthropic-beta": "prompt-caching-2025-07-31"}
 
     )
