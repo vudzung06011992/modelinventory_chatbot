@@ -87,31 +87,20 @@ def clarify_question(query, chat_history, llm_model):
     assert type(context) == str
     assert type(human) == str
     # Tạo messages với Prompt Caching
-    if context != "":
-        messages = [{
+    if context == "":
+        context = "No more information about context."
+
+    messages = [{
                             "role": "user",
                             "content": [
                                                 {
                                                     "type": "text",
-                                                    "text": system_role_message
+                                                    "text": system_role_message,
+                                                    "cache_control": {"type": "ephemeral"}  # Cache system prompt
                                                 },
                                                 {
                                                     "type": "text",
                                                     "text": context
-                                                },
-                                                {   
-                                                    "type": "text",
-                                                    "text": human
-                                                }
-                                            ]
-                        }]
-    else:
-        messages = [{
-                            "role": "user",
-                            "content": [
-                                                {
-                                                    "type": "text",
-                                                    "text": system_role_message
                                                 },
                                                 {   
                                                     "type": "text",
