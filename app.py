@@ -43,7 +43,7 @@ memory = ConversationBufferMemory(memory_key="chat_history", return_messages=Tru
 from functools import lru_cache
 
 from anthropic import Anthropic, HUMAN_PROMPT, AI_PROMPT
-anthropic_client = Anthropic(api_key="your-anthropic-api-key")
+anthropic_client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 def clarify_question(query, chat_history, llm_model=anthropic_client):
 
