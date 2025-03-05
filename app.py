@@ -43,10 +43,10 @@ memory = ConversationBufferMemory(memory_key="chat_history", return_messages=Tru
 from functools import lru_cache
 
 from anthropic import Anthropic, HUMAN_PROMPT, AI_PROMPT
-
 anthropic_client = Anthropic(api_key="your-anthropic-api-key")
 
 def clarify_question(query, chat_history, llm_model=anthropic_client):
+
     def remove_curly_braces(text):
         return text.replace("{", "").replace("}", "")
     
@@ -62,7 +62,7 @@ def clarify_question(query, chat_history, llm_model=anthropic_client):
     
     # System prompt là phần cố định để cache
     system = DB_SCHEMA_DESCRIPTION + """
-    You are a DB assistant. Bạn là chuyên viên phòng mô hình, cẩn thận và chính xác.
+    Bạn là chuyên viên phòng mô hình, cẩn thận và chính xác.
     Dựa trên hội thoại trước:
     {context}
     Với câu hỏi hiện tại của User: {question}.
@@ -78,7 +78,7 @@ def clarify_question(query, chat_history, llm_model=anthropic_client):
     - "clarified_question": Yêu cầu đã được làm rõ, kết hợp ngữ cảnh nếu cần.
     - "tables": Danh sách các bảng cần dùng.
     """
-    
+
     # Xác định human input dựa trên điều kiện
     if "làm rõ hơn" in query.lower() and previous_query:
         human = f"Yêu cầu làm rõ hơn thông tin từ câu hỏi trước: '{previous_query}'. Câu hỏi hiện tại: {query}"
@@ -194,241 +194,16 @@ if st.button("Send"):
         def write_query(llm_model=anthropic_client, info_dict=None, error=None):
             # System prompt là phần cố định để cache (bao gồm TERM_DES_JSON và hướng dẫn)
             system_prompt = TERM_DES_JSON + """
-            Bạn là chuyên viên phòng mô hình.
+                            Bạn là chuyên viên phòng mô hình.
                             Bạn là người cẩn thận, chính xác.       
                             Bạn nhận được thông tin các bảng dữ liệu, các trường dữ liệu liên quan là {input}. 
                             Bạn hãy xây dựng câu lệnh query {dialect} cho phù hợp với yêu cầu người dùng. 
                             You have access to the following tools:{tools}
+
                             Bạn có danh sách các từ sau về thuật ngữ và các trường dữ liệu tương ứng để xây dựng query
-                            ------------------------------------
-                            CODE = Phân khúc, mô hình => TRƯỜNG
-                            Large Corp = Doanh nghiệp lớn => ModelSegmentation
-                            LC = Doanh nghiệp lớn => ModelSegmentation
-                            Mid Corp = Doanh nghiệp trung bình => ModelSegmentation
-                            MC = Doanh nghiệp trung bình => ModelSegmentation
-                            FDI = Doanh nghiệp FDI => ModelSegmentation
-                            New Corp = Doanh nghiệp mới thành lập => ModelSegmentation
-                            NC = Doanh nghiệp mới thành lập => ModelSegmentation
-                            Local Bank = Ngân hàng nội địa => ModelSegmentation
-                            LB = Ngân hàng nội địa => ModelSegmentation
-                            Project Finance = Cấp tín dụng tài trợ dự án => ModelSegmentation
-                            PF = Cấp tín dụng tài trợ dự án => ModelSegmentation
-                            KHDN = KHDN => ModelSegmentation
-                            CORP = KHDN => ModelSegmentation
-                            Cho vay không tuần hoàn trong hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
-                            NONR trong hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
-                            NONREVOL trong hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
-                            NONREVOLVING trong hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
-                            Cho vay không tuần hoàn còn hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
-                            NONR còn hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
-                            NONREVOL còn hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
-                            NONREVOLVING còn hiệu lực giải ngân. = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
-                            REV trong hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
-                            REVOL trong hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
-                            REVOLVING trong hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
-                            
-                            REV còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
-                            REVOL còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
-                            REVOLVING còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
-                            TTTM trong hiệu lực giải ngân = TTTM tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
-                            TTTM còn hiệu lực giải ngân = TTTM tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
-                            CC trong hiệu lực giải ngân = Thẻ tín dụng trong hiệu lực giải ngân => ModelSegmentation
-                            CARD trong hiệu lực giải ngân = Thẻ tín dụng trong hiệu lực giải ngân => ModelSegmentation
-                            CC còn hiệu lực giải ngân = Thẻ tín dụng trong hiệu lực giải ngân => ModelSegmentation
-                            CARD còn hiệu lực giải ngân = Thẻ tín dụng trong hiệu lực giải ngân => ModelSegmentation
-                            hết hiệu lực giải ngân = Cho vay tuần hoàn hết hiệu lực giải ngân + Cho vay không tuần hoàn hết hiệu lực giải ngân + Cho vay không tuần hoàn không còn hạn mức tín dụng chưa sử dụng => ModelSegmentation
-                            ngoài hiệu lực giải ngân = Cho vay tuần hoàn hết hiệu lực giải ngân + Cho vay không tuần hoàn hết hiệu lực giải ngân + Cho vay không tuần hoàn không còn hạn mức tín dụng chưa sử dụng => ModelSegmentation
-                            Normal FDI = FDI thông thường => ModelSegmentation
-                            NormalFDI  = FDI thông thường => ModelSegmentation
-                            Potential FDI = FDI tiềm năng => ModelSegmentation
-                            PotentialFDI = FDI tiềm năng => ModelSegmentation
-                            NME = Doanh nghiệp thông thường theo CR => ModelSegmentation
-                            MRE = Doanh nghiệp siêu nhỏ theo CR => ModelSegmentation
-                            SUE = Doanh nghiệp mới thành lập theo CR => ModelSegmentation
-                            KOXH = Doanh nghiệp không xếp hạng => ModelSegmentation
-                            Loan TF KHDN = Cho vay + Tài trợ thương mại KHDN => ModelSegmentation
-                            Loan TF CORP = Cho vay + Tài trợ thương mại KHDN => ModelSegmentation
-                            RSME = Doanh nghiệp Bán lẻ vừa và nhỏ (chỉ bao gồm các khách hàng thuộc quản lý trên Sổ bán buôn) => ModelSegmentation
-                            KOXH (PD) = Doanh nghiệp không có xếp hạng theo PD => ModelSegmentation
-                            RSME = Doanh nghiệp Bán lẻ vừa và nhỏ => ModelSegmentation
-                            PF = Cấp tín dụng tài trợ dự án (PF) => ModelSegmentation
-                            OTHSL = Cho vay chuyên biệt khác Tài trợ dự án => ModelSegmentation
-                            REV trong hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            REVOL trong hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            REVOLVING trong hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            
-                            REV còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation"
-                            REVOL còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            REVOLVING còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            CORP CARD = Thẻ tín dụng KHDN => ModelSegmentation
-                            CORP CC = Thẻ tín dụng KHDN => ModelSegmentation
-                            CARD CORP = Thẻ tín dụng KHDN => ModelSegmentation
-                            CC CORP = Thẻ tín dụng KHDN => ModelSegmentation
-                            TTTM REVOL trong hiệu lực giải ngân = TTTM tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            TTTM REVOLVING trong hiệu lực giải ngân = TTTM tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            TTTM REV trong hiệu lực giải ngân = TTTM tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            TTTM REVOL còn hiệu lực giải ngân = TTTM tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            TTTM REVOLVING còn hiệu lực giải ngân = TTTM tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            TTTM REV còn hiệu lực giải ngân = TTTM tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            Cho vay không tuần hoàn trong hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            NONR trong hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            NONREVOL trong hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            NONREVOLVING trong hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            Cho vay không tuần hoàn còn hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            NONR còn hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            NONREVOL còn hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            NONREVOLVING còn hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
-                            FB, foreign bank = Ngân hàng nước ngoài => ModelSegmentation
-                            NBCI = Tổ chức tín dụng phi ngân hàng => ModelSegmentation
-                            NCFI = Định chế tài chính phi tín dụng => ModelSegmentation
-                            NCFI - NONREV - LOAN = Định chế tài chính phi tín dụng - Cho vay không tuần hoàn/ tuần hoàn hết hiệu lực giải ngân => ModelSegmentation
-                            NCFI NONREV LOAN = Định chế tài chính phi tín dụng - Cho vay không tuần hoàn/ tuần hoàn hết hiệu lực giải ngân => ModelSegmentation
-                            NCFI NONREVOLVING LOAN = Định chế tài chính phi tín dụng - Cho vay không tuần hoàn/ tuần hoàn hết hiệu lực giải ngân => ModelSegmentation
-                            NCFI LOAN NONREV = Định chế tài chính phi tín dụng - Cho vay không tuần hoàn/ tuần hoàn hết hiệu lực giải ngân => ModelSegmentation
-                            NCFI LOANNONREV = Định chế tài chính phi tín dụng - Cho vay không tuần hoàn/ tuần hoàn hết hiệu lực giải ngân => ModelSegmentation
-                            NCFI - CARD = Định chế tài chính phi tín dụng - Thẻ tín dụng => ModelSegmentation
-                            NCFI CARD = Định chế tài chính phi tín dụng - Thẻ tín dụng => ModelSegmentation
-                            NCFI CC = Định chế tài chính phi tín dụng - Thẻ tín dụng => ModelSegmentation
-                            NCFI-CC = Định chế tài chính phi tín dụng - Thẻ tín dụng => ModelSegmentation
-                            NCFI - REV - LOAN = Định chế tài chính phi tín dụng - Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
-                            NCFI REV LOAN = Định chế tài chính phi tín dụng - Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
-                            NCFI REVOLVING LOAN = Định chế tài chính phi tín dụng - Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
-                            NCFI loanREV; = Định chế tài chính phi tín dụng - Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
-                            NCFI - TF = Định chế tài chính phi tín dụng - TTTM tuần hoàn/ tuần trong hiệu lực giải ngân => ModelSegmentation
-                            NCFI TF = Định chế tài chính phi tín dụng - TTTM tuần hoàn/ tuần trong hiệu lực giải ngân => ModelSegmentation
-                            NCFI TTTM = Định chế tài chính phi tín dụng - TTTM tuần hoàn/ tuần trong hiệu lực giải ngân => ModelSegmentation
-                            NCFI-TTTM = Định chế tài chính phi tín dụng - TTTM tuần hoàn/ tuần trong hiệu lực giải ngân => ModelSegmentation
-                            IB = Cho vay Cá nhân sản xuất kinh doanh => ModelSegmentation
-                            ibiz = Cho vay Cá nhân sản xuất kinh doanh => ModelSegmentation
-                            SXKD = Cho vay Cá nhân sản xuất kinh doanh => ModelSegmentation
-                            RES = Cho vay bất động sản => ModelSegmentation
-                            RE = Cho vay bất động sản => ModelSegmentation
-                            BĐS = Cho vay bất động sản => ModelSegmentation
-                            BDS = Cho vay bất động sản => ModelSegmentation
-                            cho vay BĐS = Cho vay bất động sản => ModelSegmentation
-                            CSE = Cho vay tiêu dùng có TSBĐ => ModelSegmentation
-                            CONSUMER-SE = Cho vay tiêu dùng có TSBĐ => ModelSegmentation
-                            CONS = Cho vay tiêu dùng có TSBĐ => ModelSegmentation
-                            CVTD có TSBĐ = Cho vay tiêu dùng có TSBĐ => ModelSegmentation
-                            cvtd secured = Cho vay tiêu dùng có TSBĐ => ModelSegmentation
-                            cho vay SXKD = Cho vay tiêu dùng có TSBĐ => ModelSegmentation
-                            CONSUMER-UNSE = Cho vay tiêu dùng không có TSBĐ => ModelSegmentation
-                            CUS = Cho vay tiêu dùng không có TSBĐ => ModelSegmentation
-                            UNSEC = Cho vay tiêu dùng không có TSBĐ => ModelSegmentation
-                            cvtd không tsbđ = Cho vay tiêu dùng không có TSBĐ => ModelSegmentation
-                            cvtd unsecured = Cho vay tiêu dùng không có TSBĐ => ModelSegmentation
-                            CARD = Thẻ tín dụng => ModelSegmentation
-                            CC = Thẻ tín dụng => ModelSegmentation
-                            CREDIT CARD = Thẻ tín dụng => ModelSegmentation
-                            CAR = Cho vay mua ô tô/ xe máy để tiêu dùng => ModelSegmentation
-                            AUTO = Cho vay mua ô tô/ xe máy để tiêu dùng => ModelSegmentation
-                            ô tô = Cho vay mua ô tô/ xe máy để tiêu dùng => ModelSegmentation
-                            oto = Cho vay mua ô tô/ xe máy để tiêu dùng => ModelSegmentation
-                            FX = FX => ModelSegmentation
-                            ngoại tệ = FX => ModelSegmentation
-                            ngoại hối = FX => ModelSegmentation
-                            IRS = IRS => ModelSegmentation
-                            interest rate swap = IRS => ModelSegmentation
-                            hợp đồng hoán đổi lãi suất = IRS => ModelSegmentation
-                            hoán đổi lãi suất. IRS thuộc phái sinh lãi suất (PSLS) = IRS => ModelSegmentation
-                            CCS = CCS => ModelSegmentation
-                            cross currency swap = CCS => ModelSegmentation
-                            hợp đồng hoán đổi ngoại tệ = CCS => ModelSegmentation
-                            hoán đổi ngoại tệ. CCS thuộc phái sinh lãi suất (PSLS) = CCS => ModelSegmentation
-                            SKD = SKD => ModelSegmentation
-                            sổ kinh doanh = SKD => ModelSegmentation
-                            trading book = SKD => ModelSegmentation
-                            TB = SKD => ModelSegmentation
-                            Gold = Gold => ModelSegmentation
-                            XAU (thuộc: commodity = Gold => ModelSegmentation
-                            giao dịch hàng hóa) = Gold => ModelSegmentation
-                            TUNGLAN = Cho vay từng lần => ModelSegmentation
-                            NONREVOL = Cho vay từng lần => ModelSegmentation
-                            NONREVOLVING = Cho vay từng lần => ModelSegmentation
-                            NONR = Cho vay từng lần => ModelSegmentation
-                            NONRE = Cho vay từng lần => ModelSegmentation
-                            Cho vay hạn mức = Cho vay hạn mức => ModelSegmentation
-                            REVOLVING = Cho vay hạn mức => ModelSegmentation
-                            REV = Cho vay hạn mức => ModelSegmentation
-                            REVOL = Cho vay hạn mức => ModelSegmentation
-                            OTH = Cho vay khác => ModelSegmentation
-                            cho vay OTH = Cho vay khác => ModelSegmentation
-                            CSE = Cho vay tiêu dùng có tài sản bảo đảm => ModelSegmentation
-                            CONSUMER-SE = Cho vay tiêu dùng có tài sản bảo đảm => ModelSegmentation
-                            CONS = Cho vay tiêu dùng có tài sản bảo đảm => ModelSegmentation
-                            CONSUMER-UNSE = Cho vay tiêu dùng không có tài sản bảo đảm => ModelSegmentation
-                            CUS = Cho vay tiêu dùng không có tài sản bảo đảm => ModelSegmentation
-                            UNSEC = Cho vay tiêu dùng không có tài sản bảo đảm => ModelSegmentation
-                            CAR = Cho vay mua ô tô => ModelSegmentation
-                            AUTO = Cho vay mua ô tô => ModelSegmentation
-                            ô tô = Cho vay mua ô tô => ModelSegmentation
-                            oto = Cho vay mua ô tô => ModelSegmentation
-                            cho vay ô tô = Cho vay mua ô tô => ModelSegmentation
-                            UNRATED = Các khoản vay không được xếp hạng => ModelSegmentation
-                            UNRATE = Các khoản vay không được xếp hạng => ModelSegmentation
-                            UNRATED LOAN = Các khoản vay không được xếp hạng => ModelSegmentation
-                            UNRATE LOAN = Các khoản vay không được xếp hạng => ModelSegmentation
-                            khoản vay UNRATE = Các khoản vay không được xếp hạng => ModelSegmentation
-                            khoản vay UNRATED = Các khoản vay không được xếp hạng => ModelSegmentation
-                            LoanRevCardODTF = Cho vay tuần hoàn, thẻ tín dụng và sản phẩm thấu chi, tài trợ thương mại => ModelSegmentation
-                            BEEL KHCN = Khoản vay đã vỡ nợ phân khúc KHCN => ModelSegmentation
-                            BB = Khách hàng bán buôn => ModelSegmentation
-                            RRTD_BB = Khách hàng bán buôn => ModelSegmentation
-                            SME = Doanh nghiệp Bán lẻ vừa và nhỏ (chỉ bao gồm các khách hàng thuộc quản lý trên Sổ bán lẻ) => ModelSegmentation
-                            Deposit Loan Repo  = Deposit Loan Repo => ModelSegmentation
-                            MBF = Mô hình sử dụng dữ liệu thay thế  => ModelSegmentation
-                            MobiFone = Mô hình sử dụng dữ liệu thay thế  => ModelSegmentation
-                            Alternative data = Mô hình sử dụng dữ liệu thay thế  => ModelSegmentation
-                            alternative = Mô hình sử dụng dữ liệu thay thế  => ModelSegmentation
-                            BL = Khách hàng Bán lẻ => ModelSegmentation
-                            Retail = Khách hàng Bán lẻ => ModelSegmentation
-                            TPCP = Định giá sản phẩm Giấy tờ có giá do Kho bạc Nhà nước phát hành => ModelName
-                            GOV BOND = Định giá sản phẩm Giấy tờ có giá do Kho bạc Nhà nước phát hành => ModelName
-                            TPCPBL/ CQDP = Định giá sản phẩm Giấy tờ có giá được Chính phủ bảo lãnh/Chính quyền địa phương phát hành => ModelName
-                            TPCPBL = Định giá sản phẩm Giấy tờ có giá được Chính phủ bảo lãnh/Chính quyền địa phương phát hành => ModelName
-                            CQDP = Định giá sản phẩm Giấy tờ có giá được Chính phủ bảo lãnh/Chính quyền địa phương phát hành => ModelName
-                            TPCPBL CQDP = Định giá sản phẩm Giấy tờ có giá được Chính phủ bảo lãnh/Chính quyền địa phương phát hành => ModelName
-                            Mô hình định giá Bond FI = Mô hình Định giá GTCG do TCTD phát hành => ModelName
-                            Mô hình định giá  FI Bond = Mô hình Định giá GTCG do TCTD phát hành => ModelName
-                            mô hình MtM = Mô hình định giá IRS VND => ModelName
-                            mô hình MTM = Mô hình định giá IRS VND => ModelName
-                            mô hình mark to market = Mô hình định giá IRS VND => ModelName
-                            mô hình USD SOFR ON = Mô hình định giá IRS USD tham chiếu SOFR ON => ModelName
-                            mô hình USD SOFRON = Mô hình định giá IRS USD tham chiếu SOFR ON => ModelName
-                            mô hình USD SOFR = Mô hình định giá IRS USD tham chiếu Term SOFR => ModelName
-                            mô hình USDR TERM SOFR = Mô hình định giá IRS USD tham chiếu Term SOFR => ModelName
-                            mô hình CCS SOFR ON = Mô hình định giá CCS USD/VND với chân USD thả nổi tham chiếu SOFR ON daily compounded in Arrears => ModelName
-                            mô hình CCS SOFR = Mô hình định giá CCS USD/VND với chân USD thả nổi tham chiếu Term SOFR => ModelName
-                            mô hình Var FX = Mô hình VaR cho danh mục kinh doanh ngoại tệ => ModelName
-                            mô hình Var FX SKD = Mô hình VaR cho danh mục kinh doanh ngoại tệ => ModelName
-                            mô hình Var FX tự doanh = Mô hình VaR cho danh mục kinh doanh ngoại tệ => ModelName
-                            mô hình VaR GTCG = Mô hình VaR lịch sử GTCG => ModelName
-                            mô hình VaR Bond = Mô hình VaR lịch sử GTCG => ModelName
-                            mô hình VaR PSLS = Mô hình VaR phái sinh lãi suất => ModelName
-                            mô hình VaR tổng = Mô hình VaR tổng Sổ kinh doanh => ModelName
-                            mô hình VaR.Total = Mô hình VaR tổng Sổ kinh doanh => ModelName
-                            mô hình Var total = Mô hình VaR tổng Sổ kinh doanh => ModelName
-                            MTM GOLD = Mô hình định giá danh mục vàng miếng tại VCB => ModelName
-                            Add-on FX JPY/VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
-                            Add on FX JPY VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
-                            Addon FX JPY/VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
-                            Addon FX JPY-VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
-                            MtM FI BOND CP 1Y = Mô hình định giá GTCG do TCTD phát hành có quyền chọn call put đồng thời kỳ hạn từ 1 năm trở xuống trên sổ kinh doanh	 => ModelName
-                            MtM FI BOND call put 1Y = Mô hình định giá GTCG do TCTD phát hành có quyền chọn call put đồng thời kỳ hạn từ 1 năm trở xuống trên sổ kinh doanh	 => ModelName
-                            MtM GTCG SNH = Mô hình định giá giao dịch GTCG TCTD SNH => ModelName
-                            MtM GTCG BB = Mô hình định giá giao dịch GTCG TCTD SNH => ModelName
-                            MtM GTCG ALM = Mô hình định giá giao dịch GTCG TCTD SNH => ModelName
-                            MtM CPCP USD SNH = Mô hình định giao dịch TPCP USD SNH => ModelName
-                            mô hình Var FI Bond = Mô hình VaR lịch sử GTCG do TCTD phát hành => ModelName
-                            mô hình Var Bond FI = Mô hình VaR lịch sử GTCG do TCTD phát hành => ModelName
-                            Cho vay không tuần hoàn còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
-                            NONR còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
-                            NONREVOL còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
-                            NONREVOLVING còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
-                            I9 = IFRS9 => RegulatoryCompliance
-                            Cho vay tuần hoàn = Cho vay hạn mức => ModelSegmentation
-                            Cho vay không tuần hoàn = Cho vay từng lần => ModelSegmentation
-                            ------------------------------------
+                            """
+                            + TUDONGNGHIA
+                            """
                             Lưu ý:
                             - TÊN CÁC BẢNG, CỘT PHẢI ĐỂ TRONG ""
                             - Việc mapping các bảng dựa trên DevelopmentID. Trường DevelopmenID không phải là ModelID. Không được dùng DevelopmenID = ModelID
@@ -458,7 +233,7 @@ if st.button("Send"):
                             Final Answer: the final answer to the original input question. final answer chỉ là mã lập trình, không được có thêm gì khác. final answer chỉ là mã lập trình, không được có thêm gì khác. 
                             Begin!
                             Question: {question}
-            """
+                        """
 
             # Tạo messages với Prompt Caching
             messages = [
@@ -492,8 +267,6 @@ if st.button("Send"):
 
             # Trích xuất SQL từ phản hồi
             def extract_sql_from_final_answer(text):
-                print("text truoc khi extract", text)
-                print("end")
                 """Trích xuất câu SQL từ nội dung chứa 'Final Answer:'"""
                 if "Action Input: " in text:
                     _, _, result = text.rpartition("Action Input: ")
@@ -508,7 +281,7 @@ if st.button("Send"):
                 return result.strip()
 
             final_sql = extract_sql_from_final_answer(response.content[0].text)
-            print("------------------------------ final_sql", final_sql)
+            
             return {"query": final_sql}
         
         def execute_query(state):
@@ -552,27 +325,31 @@ if st.button("Send"):
         info_dict["previous_error"] = ""
         flag_fail = 0
         while attempt <= max_attempts:
+            
             result_3 = write_query(claude, info_dict)
             query = result_3["query"]
             print(f"-------Query ban đầu (attempt {attempt})---------------------------------------: {query}")
+
             check_result = checker_tool.invoke(query)
             print(f"-------Kết quả kiểm tra---------------------------------------: {check_result}")
+
             if "Error" not in check_result and "invalid" not in check_result.lower():
                 try:
                     result_4 = execute_query(result_3)
                     print(f"-------Query thành công---------------------------------------: {query}")
-                    break 
+                    break # Không cần thử đến max_attemp
                 except Exception as e:
                     error_message = str(e)
-                    print(f"******QUERY ERROR (attempt {attempt}): {error_message}")
-                    query = fix_query(query, error_message, claude, info_dict)
+                    print(f"-------QUERY ERROR (attempt {attempt}): {error_message}")
+                    result_3["query"] = fix_query(query, error_message, claude, info_dict)
                     info_dict["previous_error"] = f"Lỗi trước đó: {error_message}. Query đã sửa: {query}"
             else:
                 error_message = check_result
-                print(f"******CHECKER ERROR (attempt {attempt}): {error_message}")
-                query = fix_query(query, error_message, claude, info_dict)
+                print(f"-------CHECKER ERROR (attempt {attempt}): {error_message}")
+                result_3["query"] = fix_query(query, error_message, claude, info_dict)
                 info_dict["previous_error"] = f"Lỗi cú pháp trước đó: {error_message}. Query đã sửa: {query}"
-            result_3["query"] = query
+            
+            # Nếu câu lệnh không có lỗi ở trên thì sẽ không đến đoạn này. Đến đây nghĩa là có lỗi
             try:
                 result_4 = execute_query(result_3)
                 print(f"-------Query đã sửa thành công---------------------------------------: {query}")
