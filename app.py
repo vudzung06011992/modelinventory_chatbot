@@ -46,7 +46,7 @@ from langchain_anthropic import ChatAnthropic
 anthropic_client = ChatAnthropic(
     model="claude-3-7-sonnet",
     temperature=0,
-    extra_headers={"anthropic-beta": "prompt-caching-2025-07-31"}
+    extra_headers={"anthropic-beta": "prompt-caching-2025-07-31"})
 
 
 def clarify_question(query, chat_history, llm_model):
