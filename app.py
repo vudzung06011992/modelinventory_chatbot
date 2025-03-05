@@ -253,15 +253,17 @@ if st.button("Send"):
                 {
                     "role": "user",
                     "content": [
+                                                {
+                            "type": "text",
+                            "text": context,
+                        },
+                        
                         {
                             "type": "text",
                             "text": system_prompt,
                             "cache_control": {"type": "ephemeral"}  # Cache system prompt
                         },
-                        {
-                            "type": "text",
-                            "text": context,
-                        },
+
                         {
                             "type": "text",
                             "text": question,
