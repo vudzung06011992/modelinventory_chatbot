@@ -101,7 +101,7 @@ def clarify_question(query, chat_history, llm_model):
                                             {   
                                                 "type": "text",
                                                 "text": human
-                                            },
+                                            }
                                         ]
                     }
 
