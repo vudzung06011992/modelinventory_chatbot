@@ -45,7 +45,7 @@ from functools import lru_cache
 from anthropic import Anthropic, HUMAN_PROMPT, AI_PROMPT
 anthropic_client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
-def clarify_question(query, chat_history, llm_model=anthropic_client):
+def clarify_question(query, chat_history, llm_model):
 
     def remove_curly_braces(text):
         return text.replace("{", "").replace("}", "")
@@ -137,7 +137,7 @@ if st.button("Send"):
         memory.save_context({"input": user_input}, {"output": ""})
 
         ################ I. Thực thi query SQL từ AI với ngữ cảnh hội thoại ################
-        result_1 = clarify_question(user_input, st.session_state.chat_history)
+        result_1 = clarify_question(user_input, st.session_state.chat_history, claude)
     
         print("-------------------------Kết quả bước 1: -------------------------\n", result_1)
 
