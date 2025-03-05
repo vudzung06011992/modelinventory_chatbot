@@ -110,7 +110,8 @@ def clarify_question(query, chat_history, llm_model):
         messages=messages,
         model="claude-3-7-sonnet",
         stream=False,
-temperature=0.6
+temperature=0.6,
+max_tokens = 2000
 # extra_headers={"anthropic-beta": "prompt-caching-2025-07-31"}
 
     )
