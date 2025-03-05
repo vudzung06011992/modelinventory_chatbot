@@ -43,8 +43,7 @@ claude = init_chat_model("claude-3-5-sonnet-20241022", temperature=0.5)
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, k = 5)
 
 import anthropic
-anthropic_client = anthropic.Anthropic(
-    extra_headers={"anthropic-beta": "prompt-caching-2025-07-31"})
+anthropic_client = anthropic.Anthropic()
 print("--------------------------------------------------------------------------")
 
 def clarify_question(query, chat_history, llm_model):
@@ -112,6 +111,7 @@ def clarify_question(query, chat_history, llm_model):
         model="claude-3-7-sonnet",
         stream=False,
 temperature=0.6,
+extra_headers={"anthropic-beta": "prompt-caching-2025-07-31"}
 
     )
 
