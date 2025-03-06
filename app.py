@@ -548,7 +548,6 @@ if st.button("Send"):
                     break 
                 attempt += 1
 
-        ################
         print("-------------------------Kết quả bước 2, Câu lệnh là :-------------------------", result_3["query"])
         import pandas as pd
         if flag_fail == 0:        
