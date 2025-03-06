@@ -503,6 +503,7 @@ if st.button("Send"):
         info_dict["previous_error"] = ""
         flag_fail = 0
         flag_success = 0
+        
         while attempt <= max_attempts:
 
             result_3 = write_query(claude, info_dict)
@@ -538,7 +539,7 @@ if st.button("Send"):
                         flag_fail = 1
                         break 
                     attempt += 1
-        st.write("Hoàn thành kiểm tra CSDL.")
+        st.write(" Hoàn thành kiểm tra CSDL. ")
         
         if flag_fail == 0:        
             query_copy = copy.deepcopy(result_3["query"])
