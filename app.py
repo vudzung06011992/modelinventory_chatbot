@@ -507,43 +507,20 @@ if st.button("Send"):
         while attempt <= max_attempts:
 
             result_3 = write_query(claude, info_dict)
-            query = result_3["query"]
-            check_result = checker_tool.invoke(query)
-
-            if "Error" not in check_result and "invalid" not in check_result.lower():
-                try:
-                    result_4 = execute_query(result_3)
-                    flag_success = 1
-                    break
-                except Exception as e:
-                    error_message = str(e)
-                    query = fix_query(query, error_message, claude, info_dict)
-                    info_dict["previous_error"] = f"Lỗi trước đó: {error_message}. Query đã sửa: {query}"
-            else:
-                error_message = check_result
-                query = fix_query(query, error_message, claude, info_dict)
-                info_dict["previous_error"] = f"Lỗi cú pháp trước đó: {error_message}. Query đã sửa: {query}"
-
-            result_3["query"] = query       
-            if flag_success == 0: # nếu câu lệnh đã được sửa thì thực hiện chạy lại.
-                try:
-                    result_4 = execute_query(result_3)
-                    flag_success == 1
+            try:
+                result_4 = execute_query(result_3)
+            except Exception as e:
+                error_message = str(e)
+                info_dict["previous_error"] = f"Lỗi phát sinh: {error_message}. Query: {query}"
+                if attempt == max_attempts:
+                    flag_fail = 1
                     break 
-                except Exception as e:
-                    error_message = str(e)
-                    info_dict["previous_error"] = f"Lỗi sau khi sửa: {error_message}. Query: {query}"
+                attempt += 1
 
-                    if attempt == max_attempts:
-                        st.error(f"Không thể tạo câu truy vấn hợp lệ sau {max_attempts} lần thử. Lỗi cuối cùng: {error_message}")
-                        flag_fail = 1
-                        break 
-                    attempt += 1
         st.write(" Hoàn thành kiểm tra CSDL. ")
         
         if flag_fail == 0:        
-            query_copy = copy.deepcopy(result_3["query"])
-            st.write("**Câu lệnh truy vấn dữ liệu**: ", query_copy)
+            st.write("**Câu lệnh truy vấn dữ liệu**: ", result_3["query"])
             st.write("**Phản hồi của Chatbot**: Kết quả như sau")
             st.dataframe(pd.DataFrame(result_4["result"]))
         else:
@@ -557,10 +534,3 @@ if st.button("Send"):
 
     st.session_state.chat_history.append({"user": user_input, \
                                                                 "bot": "Phản hồi của Chatbot: " + result_3["query"]})
-
-# Hiển thị lịch sử hội thoại
-st.subheader(" Lịch sử hội thoại ")
-for chat in reversed(st.session_state.chat_history):  
-    st.write(f"**Người dùng:** {chat['user']}")
-    st.write(f"**Chatbot:** {chat['bot']}")
-    st.write(f"**---------**")
