@@ -27,7 +27,7 @@ assert len(query_prompt_template.messages) == 1
 
 warnings.filterwarnings("ignore")
 from functools import lru_cache
-
+claude = init_chat_model("claude-3-5-sonnet-20241022", temperature=0.5)
 # Cấu hình db
 db = SQLDatabase.from_uri(SUPABASE_URI)
 execute_query_tool = QuerySQLDatabaseTool(db=db)
@@ -98,8 +98,7 @@ def clarify_question(query, chat_history, llm_model):
                             "content": [
                                                 {
                                                     "type": "text",
-                                                    "text": system_role_message,
-                                                    "cache_control": {"type": "ephemeral"}  # Cache system prompt
+                                                    "text": system_role_message
                                                 },
                                                 {
                                                     "type": "text",
@@ -117,12 +116,8 @@ def clarify_question(query, chat_history, llm_model):
         messages=messages,
         model="claude-3-5-sonnet-20241022",
         stream=False,
-        max_tokens=8000,
-        extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
-# extra_headers={"anthropic-beta": "prompt-caching-2025-07-31"}
-
+        max_tokens=8000
     )
-
     result = response.content[0].text
     return result
 
@@ -249,8 +244,7 @@ if st.button("Send"):
                         
                         {
                             "type": "text",
-                            "text": system_prompt,
-                            "cache_control": {"type": "ephemeral"}  # Cache system prompt
+                            "text": system_prompt
                         },
 
                         {
@@ -266,8 +260,7 @@ if st.button("Send"):
                 max_tokens=8000,
                 messages=messages,
                 model="claude-3-5-sonnet-20241022",
-                extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"} , # Kích hoạt Prompt Caching
-                temperature = 0.5
+                temperature = 0.6
             )
 
             # Trích xuất SQL từ phản hồi
@@ -356,7 +349,7 @@ if st.button("Send"):
             
             # Nếu câu lệnh không có lỗi ở trên thì sẽ không đến đoạn này. Đến đây nghĩa là có lỗi
             try:
-                result_4 = execute_query(result_3)
+                result_4 = execute_query({"query": query})
                 print(f"-------Query đã sửa thành công---------------------------------------: {query}")
                 break 
             except Exception as e:
@@ -365,7 +358,6 @@ if st.button("Send"):
                 info_dict["previous_error"] = f"Lỗi sau khi sửa: {error_message}. Query: {query}"
                 
                 if attempt == max_attempts:
-                    st.error(f"Không thể tạo câu truy vấn hợp lệ sau {max_attempts} lần thử. Lỗi cuối cùng: {error_message}")
                     flag_fail = 1
                     break 
                 attempt += 1
@@ -378,7 +370,6 @@ if st.button("Send"):
             st.dataframe(result_4["result"])
 
             result_4_copy = copy.deepcopy(result_4["result"])
-            import pandas as pd
             
             st.write("**Phản hồi của Chatbot**: ")
             st.dataframe(pd.DataFrame(result_4_copy))
