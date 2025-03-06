@@ -421,8 +421,6 @@ if st.button("Send"):
                     - {previous_error}
                     
                     Bạn chỉ được trả ra câu lệnh query (không thêm bất kỳ thông tin nào khác) mà phải chạy được. Only return the Query, no explanation, no description.
-                    Ví dụ: 
-                    Đếm số lượng mô hình có loại mô hình là MC ==> câu trả lời đúng là SELECT COUNT(DISTINCT "DevelopmentID") FROM "GSTD_Model Development" d JOIN "GSTD_Model Inventory" i ON d."ModelID" = i."ModelID" WHERE LOWER(i."ModelSegmentation") = LOWER('Doanh nghiệp trung bình')
                     
                     Use the following format:
                     Question: the input question you must answer
@@ -430,7 +428,7 @@ if st.button("Send"):
                     Action: the action to take, should be one of {tools}
                     Action Input: the input to the action
                     Observation: the result of the action
-                    ... (this Thought/Action/Action Input/Observation can repeat 2 times)
+                    ... (this Thought/Action/Action Input/Observation can repeat maximum 2 times)
                     Thought: I now know the final answer
                     Final Answer: the final answer to the original input question. final answer chỉ là mã lập trình, không được có thêm gì khác. final answer chỉ là mã lập trình, không được có thêm gì khác. 
                     
