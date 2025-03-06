@@ -34,7 +34,7 @@ print("kết nối db thành công")
 # Cấu hình LLM
 from langchain_community.chat_models import ChatOpenAI
 openai = ChatOpenAI(model_name="gpt-4")
-claude = init_chat_model("claude-3-7-sonnet-20250219", temperature=0.6)
+claude = init_chat_model("claude-3-5-sonnet-20241022", temperature=0.7)
 
 # Tạo bộ nhớ hội thoại
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, k = 5)
