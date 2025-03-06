@@ -427,7 +427,7 @@ if st.button("Send"):
                     Lỗi: {error_message}
                     
                     Dựa trên thông tin ngữ cảnh: {input}
-                    Hãy sửa lại câu truy vấn để nó chạy được trên PostgreSQL (Supabase).
+                    Hãy sửa lại câu truy vấn để nó chạy được trên PostgreSQL (Supabase) và đúng với yêu cầu người dùng {question}
                     Chỉ trả ra câu truy vấn đã sửa, không giải thích.
                 """
             )
@@ -435,7 +435,8 @@ if st.button("Send"):
             fixed_query = chain.invoke({
                 "query": query,
                 "error_message": error_message,
-                "input": info_dict["input"]
+                "input": info_dict["input"],
+                "question": info_dict["question"],
             }).content
             return fixed_query
         
@@ -479,12 +480,12 @@ if st.button("Send"):
                     info_dict["previous_error"] = f"Lỗi sau khi sửa: {error_message}. Query: {query}"
 
                     if attempt == max_attempts:
-                        st.error(f"Không thể tạo câu truy vấn hợp lệ sau {max_attempts} lần thử. Lỗi cuối cùng: {error_message}")
+                        
                         flag_fail = 1
                         break 
                     attempt += 1
         st.write("Hoàn thành kiểm tra CSDL.")
-        
+
         if flag_fail == 0:        
             query_copy = copy.deepcopy(result_3["query"])
             st.write("Quá trình trích xuất Câu lệnh & Truy vấn dữ liệu (có thể diễn ra nhiều lần): ", query_copy)
