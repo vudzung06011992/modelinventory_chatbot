@@ -28,7 +28,6 @@ assert len(query_prompt_template.messages) == 1
 warnings.filterwarnings("ignore")
 from functools import lru_cache
 
-
 # Cấu hình db
 db = SQLDatabase.from_uri(SUPABASE_URI)
 execute_query_tool = QuerySQLDatabaseTool(db=db)
@@ -36,6 +35,10 @@ print("kết nối db thành công")
 
 # Cấu hình LLM
 from langchain_community.chat_models import ChatOpenAI
+toolkit = SQLDatabaseToolkit(db=db, llm=claude)
+tools = toolkit.get_tools()
+from langgraph.prebuilt import create_react_agent
+
 openai = ChatOpenAI(model_name="gpt-4")
 claude = init_chat_model("claude-3-5-sonnet-20241022", temperature=0.5)
 
@@ -185,10 +188,7 @@ if st.button("Send"):
 
         ################# III: xây dựng câu lệnh query ################
         
-        toolkit = SQLDatabaseToolkit(db=db, llm=claude)
-        tools = toolkit.get_tools()
 
-        from langgraph.prebuilt import create_react_agent
         info_dict["error"] = None
 
         def write_query(llm_model=anthropic_client, info_dict=None, error=None):
@@ -369,14 +369,6 @@ if st.button("Send"):
                     flag_fail = 1
                     break 
                 attempt += 1
-
-        # Kết quả sau vòng lặp
-        if flag_fail == 0:
-            st.write("**Câu lệnh truy vấn dữ liệu**: ", result_3["query"])
-            st.dataframe(result_4["result"])
-        else:
-            st.write("**Phản hồi của Chatbot**: Tôi không tìm thấy được nội dung bạn yêu cầu, bạn có thể làm rõ hơn câu hỏi được không?")
-        # ---------------------------------------------fix----------------------------------------------------------------------------------
 
         ################
         print("-------------------------Kết quả bước 2, Câu lệnh là :-------------------------", result_3["query"])
