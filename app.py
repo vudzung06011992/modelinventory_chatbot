@@ -4,7 +4,7 @@ import json
 import copy
 import warnings
 from typing import TypedDict, Annotated, List
-
+import pandas as pd
 import streamlit as st
 import copy
 from ultis import *
@@ -18,6 +18,7 @@ from langchain.schema import HumanMessage
 from langchain_community.tools.sql_database.tool import QuerySQLDatabaseTool
 from langgraph.prebuilt import create_react_agent
 import pandas as pd
+from langchain_community.tools.sql_database.tool import QuerySQLCheckerTool
 
 # Load SQL query system prompt
 query_prompt_template = hub.pull("langchain-ai/sql-query-system-prompt")
@@ -33,43 +34,68 @@ print("kết nối db thành công")
 # Cấu hình LLM
 from langchain_community.chat_models import ChatOpenAI
 openai = ChatOpenAI(model_name="gpt-4")
-claude = init_chat_model("claude-3-5-sonnet-20241022", temperature=0.5)
+claude = init_chat_model("claude-3-5-sonnet-20241022", temperature=0.7)
 
 # Tạo bộ nhớ hội thoại
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, k = 5)
 
 # Hàm truy vấn dữ liệu từ Supabase
-def clarify_question(query, chat_history, llm_model):
+from functools import lru_cache
 
+def clarify_question(query, chat_history, llm_model):
     def remove_curly_braces(text):
         return text.replace("{", "").replace("}", "")
     
-    context = "\n".join([f"Câu hỏi User: {chat['user']} ==> Bot hiểu yêu cầu như sau: {remove_curly_braces(chat['bot'])}" \
-                         for chat in chat_history])
-    print("== LỊCH SỬ CONTEXT: == \n", context)
-    system = DB_SCHEMA_DESCRIPTION \
-    + """You are a DB assistant. Dựa trên hội thoại trước: """ + context \
-    + """Với câu hỏi hiện tại của User: {question}. """ \
-    + """ 
-    Bạn là chuyên viên phòng mô hình.
-    Bạn là người cẩn thận, chính xác. 
-    Nhiệm vụ của bạn là:
-    - Hãy diễn giải rõ ràng, chính xác yêu cầu của người dùng hiện tại (HÃY NHỚ RẰNG: những gì bạn không chắc chắn, đừng cho vào, đừng diễn giải, Không ghi cụ thể tên trường dữ liệu, không tóm tắt)
-    - Các bảng dữ liệu cần dùng (bắt buộc phải có GSTD_Model Development). Nếu có đề cập tới phân loại theo loại 1, loại 2 hay loại 3 thì phải thêm bảng GSTD_Model Validation vào.  Nếu đề cập phân loại theo Cao, Thấp, Trung bình thì thêm bảng GSTD_Model Risk Rating vào.
-    Kết quả cần trả ra là json có key là clarified_question và tables."""
+    context = ""
+    previous_query = None
+    previous_bot_response = None
 
-    human = "{question}"
+    if chat_history:
+        for chat in reversed(chat_history):
+            context += f" Câu hỏi User: {chat['user']} ==> Bot trả lời: {remove_curly_braces(chat['bot'])} \n"
+            if previous_query is None: 
+                previous_query = chat['user']
+                previous_bot_response = chat['bot']
+    
+    system = DB_SCHEMA_DESCRIPTION + """
+    You are a DB assistant. Bạn là chuyên viên phòng mô hình, cẩn thận và chính xác.
+    Dựa trên hội thoại trước:
+    {context}
+    Với câu hỏi hiện tại của User: {question}.
+    
+    Nhiệm vụ của bạn là:
+    - Diễn giải rõ ràng, chính xác yêu cầu của người dùng hiện tại dựa trên ngữ cảnh hội thoại trước.
+    - Nếu câu hỏi hiện tại yêu cầu "làm rõ hơn" hoặc "sửa lỗi", hãy kết hợp với câu hỏi trước để làm rõ ý định đầy đủ.
+    - Nếu câu hỏi trước có câu lệnh SQL sai (trong phản hồi của bot), hãy ghi nhận lỗi đó và đảm bảo yêu cầu mới tránh lỗi tương tự.
+    - Không đoán mò hoặc thêm thông tin không chắc chắn. Không ghi cụ thể tên trường dữ liệu, không tóm tắt quá mức.
+    - Các bảng dữ liệu cần dùng: bắt buộc có "GSTD_Model Development". Nếu có phân loại theo loại 1, loại 2, loại 3 thì thêm "GSTD_Model Validation". Nếu có phân loại theo Cao, Thấp, Trung bình thì thêm "GSTD_Model Risk Rating".
+    
+    Kết quả trả ra là JSON với 2 key:
+    - "clarified_question": Yêu cầu đã được làm rõ, kết hợp ngữ cảnh nếu cần.
+    - "tables": Danh sách các bảng cần dùng.
+    """
+    
+    if "làm rõ hơn" in query.lower() and previous_query:
+        human = f"Yêu cầu làm rõ hơn thông tin từ câu hỏi trước: '{previous_query}'. Câu hỏi hiện tại: {query}"
+    elif "sai rồi" in query.lower() and previous_bot_response and "SELECT" in previous_bot_response:
+        human = f"Yêu cầu sửa lỗi từ câu hỏi trước: '{previous_query}' với câu lệnh SQL trước đó: '{previous_bot_response}'. Câu hỏi hiện tại: {query}"
+    else:
+        human = "{question}"
+    
     prompt = ChatPromptTemplate.from_messages([
-                                                                                ("system", system), ("human", human)
-                                                                            ])
+        ("system", system),
+        ("human", human)
+    ])
 
     chain = prompt | llm_model
-    tmp = chain.invoke(
-        {
-            "question": query
-        })  
+    tmp = chain.invoke({
+        "context": context,
+        "question": query
+    })
+    result = tmp.content
+    
+    return result
 
-    return tmp.content
 
 # Giao diện Streamlit
 st.title("Model-Inventory AI Chatbot")
@@ -80,6 +106,7 @@ if "chat_history" not in st.session_state:
 
 # Nhập câu hỏi từ người dùng
 user_input = st.text_input("Tôi có thể giúp gì cho bạn :")
+db = SQLDatabase.from_uri(SUPABASE_URI)
 
 if st.button("Send"):
     if user_input:
@@ -274,24 +301,7 @@ if st.button("Send"):
                     AUTO = Cho vay mua ô tô/ xe máy để tiêu dùng => ModelSegmentation
                     ô tô = Cho vay mua ô tô/ xe máy để tiêu dùng => ModelSegmentation
                     oto = Cho vay mua ô tô/ xe máy để tiêu dùng => ModelSegmentation
-                    FX = FX => ModelSegmentation
-                    ngoại tệ = FX => ModelSegmentation
-                    ngoại hối = FX => ModelSegmentation
-                    IRS = IRS => ModelSegmentation
-                    interest rate swap = IRS => ModelSegmentation
-                    hợp đồng hoán đổi lãi suất = IRS => ModelSegmentation
-                    hoán đổi lãi suất. IRS thuộc phái sinh lãi suất (PSLS) = IRS => ModelSegmentation
-                    CCS = CCS => ModelSegmentation
-                    cross currency swap = CCS => ModelSegmentation
-                    hợp đồng hoán đổi ngoại tệ = CCS => ModelSegmentation
-                    hoán đổi ngoại tệ. CCS thuộc phái sinh lãi suất (PSLS) = CCS => ModelSegmentation
-                    SKD = SKD => ModelSegmentation
-                    sổ kinh doanh = SKD => ModelSegmentation
-                    trading book = SKD => ModelSegmentation
-                    TB = SKD => ModelSegmentation
-                    Gold = Gold => ModelSegmentation
-                    XAU (thuộc: commodity = Gold => ModelSegmentation
-                    giao dịch hàng hóa) = Gold => ModelSegmentation
+                    
                     TUNGLAN = Cho vay từng lần => ModelSegmentation
                     NONREVOL = Cho vay từng lần => ModelSegmentation
                     NONREVOLVING = Cho vay từng lần => ModelSegmentation
@@ -330,47 +340,7 @@ if st.button("Send"):
                     MobiFone = Mô hình sử dụng dữ liệu thay thế  => ModelSegmentation
                     Alternative data = Mô hình sử dụng dữ liệu thay thế  => ModelSegmentation
                     alternative = Mô hình sử dụng dữ liệu thay thế  => ModelSegmentation
-                    BL = Khách hàng Bán lẻ => ModelSegmentation
-                    Retail = Khách hàng Bán lẻ => ModelSegmentation
-                    TPCP = Định giá sản phẩm Giấy tờ có giá do Kho bạc Nhà nước phát hành => ModelName
-                    GOV BOND = Định giá sản phẩm Giấy tờ có giá do Kho bạc Nhà nước phát hành => ModelName
-                    TPCPBL/ CQDP = Định giá sản phẩm Giấy tờ có giá được Chính phủ bảo lãnh/Chính quyền địa phương phát hành => ModelName
-                    TPCPBL = Định giá sản phẩm Giấy tờ có giá được Chính phủ bảo lãnh/Chính quyền địa phương phát hành => ModelName
-                    CQDP = Định giá sản phẩm Giấy tờ có giá được Chính phủ bảo lãnh/Chính quyền địa phương phát hành => ModelName
-                    TPCPBL CQDP = Định giá sản phẩm Giấy tờ có giá được Chính phủ bảo lãnh/Chính quyền địa phương phát hành => ModelName
-                    Mô hình định giá Bond FI = Mô hình Định giá GTCG do TCTD phát hành => ModelName
-                    Mô hình định giá  FI Bond = Mô hình Định giá GTCG do TCTD phát hành => ModelName
-                    mô hình MtM = Mô hình định giá IRS VND => ModelName
-                    mô hình MTM = Mô hình định giá IRS VND => ModelName
-                    mô hình mark to market = Mô hình định giá IRS VND => ModelName
-                    mô hình USD SOFR ON = Mô hình định giá IRS USD tham chiếu SOFR ON => ModelName
-                    mô hình USD SOFRON = Mô hình định giá IRS USD tham chiếu SOFR ON => ModelName
-                    mô hình USD SOFR = Mô hình định giá IRS USD tham chiếu Term SOFR => ModelName
-                    mô hình USDR TERM SOFR = Mô hình định giá IRS USD tham chiếu Term SOFR => ModelName
-                    mô hình CCS SOFR ON = Mô hình định giá CCS USD/VND với chân USD thả nổi tham chiếu SOFR ON daily compounded in Arrears => ModelName
-                    mô hình CCS SOFR = Mô hình định giá CCS USD/VND với chân USD thả nổi tham chiếu Term SOFR => ModelName
-                    mô hình Var FX = Mô hình VaR cho danh mục kinh doanh ngoại tệ => ModelName
-                    mô hình Var FX SKD = Mô hình VaR cho danh mục kinh doanh ngoại tệ => ModelName
-                    mô hình Var FX tự doanh = Mô hình VaR cho danh mục kinh doanh ngoại tệ => ModelName
-                    mô hình VaR GTCG = Mô hình VaR lịch sử GTCG => ModelName
-                    mô hình VaR Bond = Mô hình VaR lịch sử GTCG => ModelName
-                    mô hình VaR PSLS = Mô hình VaR phái sinh lãi suất => ModelName
-                    mô hình VaR tổng = Mô hình VaR tổng Sổ kinh doanh => ModelName
-                    mô hình VaR.Total = Mô hình VaR tổng Sổ kinh doanh => ModelName
-                    mô hình Var total = Mô hình VaR tổng Sổ kinh doanh => ModelName
-                    MTM GOLD = Mô hình định giá danh mục vàng miếng tại VCB => ModelName
-                    Add-on FX JPY/VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
-                    Add on FX JPY VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
-                    Addon FX JPY/VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
-                    Addon FX JPY-VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
-                    MtM FI BOND CP 1Y = Mô hình định giá GTCG do TCTD phát hành có quyền chọn call put đồng thời kỳ hạn từ 1 năm trở xuống trên sổ kinh doanh	 => ModelName
-                    MtM FI BOND call put 1Y = Mô hình định giá GTCG do TCTD phát hành có quyền chọn call put đồng thời kỳ hạn từ 1 năm trở xuống trên sổ kinh doanh	 => ModelName
-                    MtM GTCG SNH = Mô hình định giá giao dịch GTCG TCTD SNH => ModelName
-                    MtM GTCG BB = Mô hình định giá giao dịch GTCG TCTD SNH => ModelName
-                    MtM GTCG ALM = Mô hình định giá giao dịch GTCG TCTD SNH => ModelName
-                    MtM CPCP USD SNH = Mô hình định giao dịch TPCP USD SNH => ModelName
-                    mô hình Var FI Bond = Mô hình VaR lịch sử GTCG do TCTD phát hành => ModelName
-                    mô hình Var Bond FI = Mô hình VaR lịch sử GTCG do TCTD phát hành => ModelName
+                    
                     Cho vay không tuần hoàn còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
                     NONR còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
                     NONREVOL còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
@@ -403,7 +373,7 @@ if st.button("Send"):
                     Action: the action to take, should be one of {tools}
                     Action Input: the input to the action
                     Observation: the result of the action
-                    ... (this Thought/Action/Action Input/Observation can repeat 2 times)
+                    ... (this Thought/Action/Action Input/Observation can repeat N times)
                     Thought: I now know the final answer
                     Final Answer: the final answer to the original input question. final answer chỉ là mã lập trình, không được có thêm gì khác. final answer chỉ là mã lập trình, không được có thêm gì khác. 
                     
@@ -428,12 +398,12 @@ if st.button("Send"):
             def extract_sql_from_final_answer(text):
                 print("text truoc khi extract", text)
                 print("end")
-                
-                """Trích xuất câu SQL từ nội dung chứa 'Final Answer:'"""
-                
+                                
                 if "Action Input: " in text:   
                     _, _, result = text.rpartition("Action Input: ")
                     result =  result
+                else: 
+                    result = text
                 if "Final Answer:" in result:
                     _, _, result = result.rpartition("Final Answer: ")
                     result =  result
@@ -442,62 +412,86 @@ if st.button("Send"):
                 return result
 
             final_sql = extract_sql_from_final_answer(answer["messages"][1].content)
-            print("------------------------------ final_sql", final_sql)
             return {"query": final_sql}
         
         def execute_query(state):
-            """Execute SQL query."""
-            print("Câu lệnh để query là ", state["query"])
-
-            db = SQLDatabase.from_uri(SUPABASE_URI)
             
-
-            # return {"result": execute_query_tool.invoke(state["query"])}
             return {"result": pd.DataFrame(db._execute(state["query"]))}
+        
+        # --------------------------------------------------- fix -----------------------------------------------------------
+        def fix_query(query, error_massge, llm_model, info_dict):
+            fix_prompt = PromptTemplate.from_template(
+                """
+                    Bạn là chuyên gia SQL. Một câu truy vấn sau đây đã gặp lỗi:
+                    Query: {query}
+                    Lỗi: {error_message}
+                    
+                    Dựa trên thông tin ngữ cảnh: {input}
+                    Hãy sửa lại câu truy vấn để nó chạy được trên PostgreSQL (Supabase).
+                    Chỉ trả ra câu truy vấn đã sửa, không giải thích.
+                """
+            )
+            chain = fix_prompt | llm_model
+            fixed_query = chain.invoke({
+                "query": query,
+                "error_message": error_message,
+                "input": info_dict["input"]
+            }).content
+            return fixed_query
+        
+        checker_tool = QuerySQLCheckerTool(db=db, llm=claude)
 
         # Tạo query và execute
         attempt = 0
         error_message = None
-        max_attempts = 3
+        max_attempts = 2
         info_dict["previous_error"] = ""
         flag_fail = 0
+        flag_success = 0
         while attempt <= max_attempts:
-            result_3 = write_query(claude, info_dict)                
-            
-            try:
-                # Execute query
-                print("-------result_3 trước khi chạy --------------------------------------- ", result_3)
-                result_4 = execute_query(result_3)
-                break  # Nếu thành công, thoát khỏi vòng lặp
-            except Exception as e:
-                error_message = str(e)
-                print(f"******QUERY ERROR (attempt {attempt}): Việc tạo Query xuất hiện lỗi: {error_message}")
-                # st.write(f"QUERY ERROR (attempt {attempt}): Việc tạo Query xuất hiện lỗi: {error_message}")
-                
-                # Update info_dict with error information for better context
-                info_dict["previous_error"] = "Hãy phân tích để phát hiện lỗi và tránh lỗi từ truy vấn sau: " + result_3["query"] + ". Câu truy vấn này đã gặp lỗi: " + error_message
-                if attempt == max_attempts:
-                    st.error(f"Không thể tạo câu truy vấn hợp lệ sau {max_attempts} lần thử. Lỗi cuối cùng: {error_message}")
-                    flag_fail = 1
-                    break  # Dừng vòng lặp ngay
-                attempt += 1
-        # If we've exhausted all attempts
 
-        ################
-        print("-------------------------Kết quả bước 2, Câu lệnh là :-------------------------", result_3["query"])
+            result_3 = write_query(claude, info_dict)
+            query = result_3["query"]
+            check_result = checker_tool.invoke(query)
+
+            if "Error" not in check_result and "invalid" not in check_result.lower():
+                try:
+                    result_4 = execute_query(result_3)
+                    flag_success = 1
+                    break
+                except Exception as e:
+                    error_message = str(e)
+                    query = fix_query(query, error_message, claude, info_dict)
+                    info_dict["previous_error"] = f"Lỗi trước đó: {error_message}. Query đã sửa: {query}"
+            else:
+                error_message = check_result
+                query = fix_query(query, error_message, claude, info_dict)
+                info_dict["previous_error"] = f"Lỗi cú pháp trước đó: {error_message}. Query đã sửa: {query}"
+
+            result_3["query"] = query       
+            if flag_success == 0: # nếu câu lệnh đã được sửa thì thực hiện chạy lại.
+                try:
+                    result_4 = execute_query(result_3)
+                    flag_success == 1
+                    break 
+                except Exception as e:
+                    error_message = str(e)
+                    info_dict["previous_error"] = f"Lỗi sau khi sửa: {error_message}. Query: {query}"
+
+                    if attempt == max_attempts:
+                        st.error(f"Không thể tạo câu truy vấn hợp lệ sau {max_attempts} lần thử. Lỗi cuối cùng: {error_message}")
+                        flag_fail = 1
+                        break 
+                    attempt += 1
+        st.write("Hoàn thành kiểm tra CSDL.")
+        
         if flag_fail == 0:        
             query_copy = copy.deepcopy(result_3["query"])
-            st.write("**Câu lệnh truy vấn dữ liệu**: ", query_copy)
-
-            result_4_copy = copy.deepcopy(result_4["result"])
-            st.write("**Phản hồi của Chatbot**: ")
-            st.dataframe(pd.DataFrame(result_4_copy))
-            import pandas as pd
-            
-            
+            st.write("Quá trình trích xuất Câu lệnh & Truy vấn dữ liệu (có thể diễn ra nhiều lần): ", query_copy)
+            st.write("**Phản hồi của Chatbot**: Kết quả như sau")
+            st.dataframe(pd.DataFrame(result_4["result"]))
         else:
-            st.write("**Phản hồi của Chatbot**: Tôi không tìm thấy được nội dung bạn yêu cầu, bạn có thể làm rõ hơn câu hỏi được không?")
-
+            st.write("**Phản hồi cuối của Chatbot**: Tôi không tìm thấy được nội dung bạn yêu cầu, bạn có thể làm rõ hơn câu hỏi được không?")
 
     # VI. Hiển thị:
     def remove_newlines(text):
@@ -508,3 +502,9 @@ if st.button("Send"):
     st.session_state.chat_history.append({"user": user_input, \
                                                                 "bot": "Phản hồi của Chatbot: " + result_3["query"]})
 
+# Hiển thị lịch sử hội thoại
+st.subheader(" Lịch sử hội thoại ")
+for chat in reversed(st.session_state.chat_history):  
+    st.write(f"**Người dùng:** {chat['user']}")
+    st.write(f"**Chatbot:** {chat['bot']}")
+    st.write(f"**---------**")
