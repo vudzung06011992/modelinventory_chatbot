@@ -472,13 +472,7 @@ if st.button("Send"):
             return {"query": final_sql}
         
         def execute_query(state):
-            """Execute SQL query."""
-            print("Câu lệnh để query là ", state["query"])
-
             db = SQLDatabase.from_uri(SUPABASE_URI)
-            
-
-            # return {"result": execute_query_tool.invoke(state["query"])}
             return {"result": pd.DataFrame(db._execute(state["query"]))}
         
         # --------------------------------------------------- fix -----------------------------------------------------------
@@ -494,7 +488,6 @@ if st.button("Send"):
                     Chỉ trả ra câu truy vấn đã sửa, không giải thích.
                 """
             )
-
             chain = fix_prompt | llm_model
             fixed_query = chain.invoke({
                 "query": query,
@@ -511,55 +504,51 @@ if st.button("Send"):
         max_attempts = 3
         info_dict["previous_error"] = ""
         flag_fail = 0
+        flag_success = 0
         while attempt <= max_attempts:
+
             result_3 = write_query(claude, info_dict)
             query = result_3["query"]
-            print(f"-------Query ban đầu (attempt {attempt})---------------------------------------: {query}")
             check_result = checker_tool.invoke(query)
-            print(f"-------Kết quả kiểm tra---------------------------------------: {check_result}")
+
             if "Error" not in check_result and "invalid" not in check_result.lower():
                 try:
                     result_4 = execute_query(result_3)
-                    print(f"-------Query thành công---------------------------------------: {query}")
-                    break 
+                    flag_success = 1
+                    break
                 except Exception as e:
                     error_message = str(e)
-                    print(f"******QUERY ERROR (attempt {attempt}): {error_message}")
                     query = fix_query(query, error_message, claude, info_dict)
                     info_dict["previous_error"] = f"Lỗi trước đó: {error_message}. Query đã sửa: {query}"
             else:
                 error_message = check_result
-                print(f"******CHECKER ERROR (attempt {attempt}): {error_message}")
                 query = fix_query(query, error_message, claude, info_dict)
                 info_dict["previous_error"] = f"Lỗi cú pháp trước đó: {error_message}. Query đã sửa: {query}"
-            result_3["query"] = query
-            try:
-                result_4 = execute_query(result_3)
-                print(f"-------Query đã sửa thành công---------------------------------------: {query}")
-                break 
-            except Exception as e:
-                error_message = str(e)
-                print(f"******QUERY ERROR SAU SỬA (attempt {attempt}): {error_message}")
-                info_dict["previous_error"] = f"Lỗi sau khi sửa: {error_message}. Query: {query}"
-                
-                if attempt == max_attempts:
-                    st.error(f"Không thể tạo câu truy vấn hợp lệ sau {max_attempts} lần thử. Lỗi cuối cùng: {error_message}")
-                    flag_fail = 1
-                    break 
-                attempt += 1
 
-        print("-------------------------Kết quả bước 2, Câu lệnh là :-------------------------", result_3["query"])
+            result_3["query"] = query       
+            if flag_success == 0: # nếu câu lệnh đã được sửa thì thực hiện chạy lại.
+                try:
+                    result_4 = execute_query(result_3)
+                    flag_success == 1
+                    break 
+                except Exception as e:
+                    error_message = str(e)
+                    info_dict["previous_error"] = f"Lỗi sau khi sửa: {error_message}. Query: {query}"
+
+                    if attempt == max_attempts:
+                        st.error(f"Không thể tạo câu truy vấn hợp lệ sau {max_attempts} lần thử. Lỗi cuối cùng: {error_message}")
+                        flag_fail = 1
+                        break 
+                    attempt += 1
+
         import pandas as pd
         if flag_fail == 0:        
             query_copy = copy.deepcopy(result_3["query"])
             st.write("**Câu lệnh truy vấn dữ liệu**: ", query_copy)
-
-            result_4_copy = copy.deepcopy(result_4["result"])
             st.write("**Phản hồi của Chatbot**: ")
-            st.dataframe(pd.DataFrame(result_4_copy))
+            st.dataframe(pd.DataFrame(result_4["result"]))
         else:
             st.write("**Phản hồi của Chatbot**: Tôi không tìm thấy được nội dung bạn yêu cầu, bạn có thể làm rõ hơn câu hỏi được không?")
-
 
     # VI. Hiển thị:
     def remove_newlines(text):
