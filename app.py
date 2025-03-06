@@ -439,7 +439,7 @@ if st.button("Send"):
             }).content
             return fixed_query
         
-        checker_tool = QuerySQLCheckerTool(db=db)
+        checker_tool = QuerySQLCheckerTool(db=db, llm=claude)
 
         # Tạo query và execute
         attempt = 0
