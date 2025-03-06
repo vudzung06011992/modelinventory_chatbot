@@ -4,7 +4,7 @@ import json
 import copy
 import warnings
 from typing import TypedDict, Annotated, List
-
+import pandas as pd
 import streamlit as st
 import copy
 from ultis import *
@@ -106,6 +106,7 @@ if "chat_history" not in st.session_state:
 
 # Nhập câu hỏi từ người dùng
 user_input = st.text_input("Tôi có thể giúp gì cho bạn :")
+db = SQLDatabase.from_uri(SUPABASE_URI)
 
 if st.button("Send"):
     if user_input:
@@ -468,11 +469,10 @@ if st.button("Send"):
                 return result
 
             final_sql = extract_sql_from_final_answer(answer["messages"][1].content)
-            print("------------------------------ final_sql", final_sql)
             return {"query": final_sql}
         
         def execute_query(state):
-            db = SQLDatabase.from_uri(SUPABASE_URI)
+            
             return {"result": pd.DataFrame(db._execute(state["query"]))}
         
         # --------------------------------------------------- fix -----------------------------------------------------------
@@ -540,12 +540,12 @@ if st.button("Send"):
                         flag_fail = 1
                         break 
                     attempt += 1
-
-        import pandas as pd
+        st.write("Hoàn thành kiểm tra CSDL.")
+        
         if flag_fail == 0:        
             query_copy = copy.deepcopy(result_3["query"])
             st.write("**Câu lệnh truy vấn dữ liệu**: ", query_copy)
-            st.write("**Phản hồi của Chatbot**: ")
+            st.write("**Phản hồi của Chatbot**: Kết quả như sau")
             st.dataframe(pd.DataFrame(result_4["result"]))
         else:
             st.write("**Phản hồi của Chatbot**: Tôi không tìm thấy được nội dung bạn yêu cầu, bạn có thể làm rõ hơn câu hỏi được không?")
