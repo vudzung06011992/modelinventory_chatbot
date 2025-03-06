@@ -294,7 +294,39 @@ Bạn có danh sách các từ sau về thuật ngữ và các trường dữ li
                     TPCPBL = Định giá sản phẩm Giấy tờ có giá được Chính phủ bảo lãnh/Chính quyền địa phương phát hành => ModelName
                     CQDP = Định giá sản phẩm Giấy tờ có giá được Chính phủ bảo lãnh/Chính quyền địa phương phát hành => ModelName
                     TPCPBL CQDP = Định giá sản phẩm Giấy tờ có giá được Chính phủ bảo lãnh/Chính quyền địa phương phát hành => ModelName
-                    
+                    Mô hình định giá Bond FI = Mô hình Định giá GTCG do TCTD phát hành => ModelName
+                    Mô hình định giá  FI Bond = Mô hình Định giá GTCG do TCTD phát hành => ModelName
+                    mô hình MtM = Mô hình định giá IRS VND => ModelName
+                    mô hình MTM = Mô hình định giá IRS VND => ModelName
+                    mô hình mark to market = Mô hình định giá IRS VND => ModelName
+                    mô hình USD SOFR ON = Mô hình định giá IRS USD tham chiếu SOFR ON => ModelName
+                    mô hình USD SOFRON = Mô hình định giá IRS USD tham chiếu SOFR ON => ModelName
+                    mô hình USD SOFR = Mô hình định giá IRS USD tham chiếu Term SOFR => ModelName
+                    mô hình USDR TERM SOFR = Mô hình định giá IRS USD tham chiếu Term SOFR => ModelName
+                    mô hình CCS SOFR ON = Mô hình định giá CCS USD/VND với chân USD thả nổi tham chiếu SOFR ON daily compounded in Arrears => ModelName
+                    mô hình CCS SOFR = Mô hình định giá CCS USD/VND với chân USD thả nổi tham chiếu Term SOFR => ModelName
+                    mô hình Var FX = Mô hình VaR cho danh mục kinh doanh ngoại tệ => ModelName
+                    mô hình Var FX SKD = Mô hình VaR cho danh mục kinh doanh ngoại tệ => ModelName
+                    mô hình Var FX tự doanh = Mô hình VaR cho danh mục kinh doanh ngoại tệ => ModelName
+                    mô hình VaR GTCG = Mô hình VaR lịch sử GTCG => ModelName
+                    mô hình VaR Bond = Mô hình VaR lịch sử GTCG => ModelName
+                    mô hình VaR PSLS = Mô hình VaR phái sinh lãi suất => ModelName
+                    mô hình VaR tổng = Mô hình VaR tổng Sổ kinh doanh => ModelName
+                    mô hình VaR.Total = Mô hình VaR tổng Sổ kinh doanh => ModelName
+                    mô hình Var total = Mô hình VaR tổng Sổ kinh doanh => ModelName
+                    MTM GOLD = Mô hình định giá danh mục vàng miếng tại VCB => ModelName
+                    Add-on FX JPY/VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
+                    Add on FX JPY VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
+                    Addon FX JPY/VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
+                    Addon FX JPY-VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
+                    MtM FI BOND CP 1Y = Mô hình định giá GTCG do TCTD phát hành có quyền chọn call put đồng thời kỳ hạn từ 1 năm trở xuống trên sổ kinh doanh	 => ModelName
+                    MtM FI BOND call put 1Y = Mô hình định giá GTCG do TCTD phát hành có quyền chọn call put đồng thời kỳ hạn từ 1 năm trở xuống trên sổ kinh doanh	 => ModelName
+                    MtM GTCG SNH = Mô hình định giá giao dịch GTCG TCTD SNH => ModelName
+                    MtM GTCG BB = Mô hình định giá giao dịch GTCG TCTD SNH => ModelName
+                    MtM GTCG ALM = Mô hình định giá giao dịch GTCG TCTD SNH => ModelName
+                    MtM CPCP USD SNH = Mô hình định giao dịch TPCP USD SNH => ModelName
+                    mô hình Var FI Bond = Mô hình VaR lịch sử GTCG do TCTD phát hành => ModelName
+                    mô hình Var Bond FI = Mô hình VaR lịch sử GTCG do TCTD phát hành => ModelName
                     Cho vay không tuần hoàn còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
                     NONR còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
                     NONREVOL còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
