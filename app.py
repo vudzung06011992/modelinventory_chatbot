@@ -80,18 +80,23 @@ user_input = st.text_input("Tôi có thể giúp gì cho bạn :")
 
 if st.button("Send"):
     if user_input:
+        print("===============BẮT ĐẦU===============")
         start_time = time.time()
         # Lưu câu hỏi vào bộ nhớ
         memory.save_context({"input": user_input}, {"output": ""})
 
         ################ I. Thực thi query SQL từ AI với ngữ cảnh hội thoại ################
         result_1 = clarify_question(user_input, st.session_state.chat_history, claude)
-    
+        print("-------------------------Kết quả bước 1: -------------------------\n", result_1)
+
         # tách thông tin từ kết quả trả về
-        result_1 = json.loads(result_1)
+        if isinstance(result_1, dict):
+            print("result_1 đã là dictionary, không cần json.loads()")
+        else:
+            result_1 = json.loads(result_1)
+
         clarified_question = result_1["clarified_question"]
         tables_to_extract = result_1["tables"]
-        st.write("**Câu hỏi của người dùng**: ", clarified_question)
 
         ################ II. Extract thông tin cần thiết ################
         
@@ -124,8 +129,9 @@ if st.button("Send"):
         tools = toolkit.get_tools()
 
         from langgraph.prebuilt import create_react_agent
+        info_dict["error"] = None
 
-        def write_query(llm_model, info_dict):
+        def write_query(llm_model, info_dict, error=None):
 
             prompt = PromptTemplate.from_template(
                 (TERM_DES_JSON + """
@@ -135,15 +141,19 @@ if st.button("Send"):
 
                     Lưu ý:
                     - TÊN CÁC BẢNG, CỘT PHẢI ĐỂ TRONG ""
-                    - Việc mapping các bảng dựa trên trường DevelopmentID. Trường DevelopmenID không phải là ModelID. Không được dùng DevelopmenID = ModelID
-                    - Câu lệnh phải tuân thủ nguyên tắc của {dialect} trong Supabase.
+                    - Việc mapping các bảng dựa trên DevelopmentID. Trường DevelopmenID không phải là ModelID. Không được dùng DevelopmenID = ModelID
+                    - Câu lệnh phải tuân thủ nguyên tắc {dialect} trong Supabase.
                     - Các TRƯỜNG DATE (tên trường có chữ date) phải được chuyển đổi về int với giá trị không null, rồi mới sử dụng. Lưu ý: các trường này có thể tồn tại giá trị NULL hoặc missing.
                     - Bạn phải rà soát câu hỏi người dùng để đảm bảo câu lệnh trả về kết quả chính xác.
                     - Đừng tự thêm điều kiện where mà người dùng không cần
                     - Không thêm ký tự \n, \ không cần thiết.
-
+                    - Các trường text, thực hiện lấy giá trị lowcase để thực hiện điều kiện lọc.
+                    - Nếu chủ thể hỏi về mô hình, bạn phải liệt kê thông tin theo DevelopmentID (không phải theo Model ID): ví dụ 
+                        số lượng Mô Hình Bán Buôn Cho Doanh Nghiệp Vừa Theo Chuẩn Basel là 02 với DevelopmentID là 32, 33
+                    - {previous_error}
+                    
                     Bạn chỉ được trả ra câu lệnh query (không thêm bất kỳ thông tin nào khác) mà phải chạy được. Only return the Query, no explanation, no description.
-
+                    
                     Use the following format:
                     Question: the input question you must answer
                     Thought: you should always think about what to do
@@ -153,7 +163,7 @@ if st.button("Send"):
                     ... (this Thought/Action/Action Input/Observation can repeat N times)
                     Thought: I now know the final answer
                     Final Answer: the final answer to the original input question
-
+                    
                     Begin!
                     Question: {question}
                 """)
@@ -164,6 +174,7 @@ if st.button("Send"):
                 dialect="PostgreSQL",
                 question=info_dict["question"],
                 input=info_dict["input"],
+                previous_error = info_dict["previous_error"],
                 tools= """["QuerySQLDatabaseTool", "InfoSQLDatabaseTool", "ListSQLDatabaseTool", "QuerySQLCheckerTool"]"""
             )
 
@@ -176,23 +187,51 @@ if st.button("Send"):
                 keyword = "Final Answer:"
                 if keyword in text:
                     return text.split(keyword, 1)[1].strip()
+                if "Action Input: " in text:   
+                    return text.split(keyword, 1)[1].strip()
                 return text
 
             return {"query": extract_sql_from_final_answer(answer["messages"][1].content)}
-        
-        result_3 = write_query(claude, info_dict)
-        print("******Câu lệnh là :******", result_3["query"])
-        st.write("**Câu lệnh truy vấn dữ liệu: **", result_3["query"])
-
-        # IV. Thực thi câu lệnh query
         
         def execute_query(state):
             """Execute SQL query."""
             
             return {"result": execute_query_tool.invoke(state["query"])}
 
-        result_4 = execute_query(result_3)
-        st.write("**Kết quả truy vấn: **", result_4["result"])
+        # Tạo query và execute
+        attempt = 1
+        error_message = None
+        max_attempts = 2
+        info_dict["previous_error"] = ""
+
+        while attempt <= max_attempts:
+            try:
+                # Generate query
+                result_3 = write_query(claude, info_dict)                
+                print("-------result_3 là ", result_3)
+                # Execute query
+                result_4 = execute_query(result_3)
+                break  # Nếu thành công, thoát khỏi vòng lặp
+
+            except Exception as e:
+                error_message = str(e)
+                print(f"******QUERY ERROR (attempt {attempt}): Việc tạo Query xuất hiện lỗi: {error_message}")
+                st.write(f"QUERY ERROR (attempt {attempt}): Việc tạo Query xuất hiện lỗi: {error_message}")
+                
+                # Update info_dict with error information for better context
+                info_dict["previous_error"] = "Hãy phân tích để phát hiện lỗi và tránh lỗi câu truy vấn sau: " + error_message + ". Câu truy vấn này đã gặp lỗi: " + error_message
+                if attempt == max_attempts:
+                    st.error(f"Không thể tạo câu truy vấn hợp lệ sau {max_attempts} lần thử. Lỗi cuối cùng: {error_message}")
+                    break  # Dừng vòng lặp ngay
+
+                attempt += 1
+        # If we've exhausted all attempts
+        
+
+        ################
+        print("-------------------------Kết quả bước 2, Câu lệnh là :-------------------------", result_3["query"])
+        st.write("**Câu lệnh truy vấn dữ liệu**: ", result_3["query"])
+        st.write("**Kết quả truy vấn**: ", result_4["result"])
 
         # V. Trả lời
         def generate_answer(state, model):
@@ -203,7 +242,9 @@ if st.button("Send"):
                 and db retrieval result, answer the user question.\n\n
                 Question: {}
 
-                SQL Result: {}
+                Result provided: {}
+
+                Câu trả lời cần liệt kê các thông tin liên quan tới định danh như DevelopmentID (không được cắt, bỏ thông tin)
                 
                 Trình bày đẹp, bỏ các ký tự \n đi
                 """.format(state["question"], state["result"])
@@ -212,7 +253,8 @@ if st.button("Send"):
             return response.content
         
         result_5 = generate_answer({"question":clarified_question, "result": result_4 }, openai)
-        st.write("**Phản hồi của Chatbot: **", result_5)
+        print("-------------------------Kết quả bước 5, final answer :-------------------------", result_5)
+        st.write("**Phản hồi của Chatbot**: ", result_5)
 
     # VI. Hiển thị:
     def remove_newlines(text):
