@@ -373,7 +373,7 @@ if st.button("Send"):
                     Action: the action to take, should be one of {tools}
                     Action Input: the input to the action
                     Observation: the result of the action
-                    ... (this Thought/Action/Action Input/Observation can repeat 2 times)
+                    ... (this Thought/Action/Action Input/Observation can repeat N times)
                     Thought: I now know the final answer
                     Final Answer: the final answer to the original input question. final answer chỉ là mã lập trình, không được có thêm gì khác. final answer chỉ là mã lập trình, không được có thêm gì khác. 
                     
