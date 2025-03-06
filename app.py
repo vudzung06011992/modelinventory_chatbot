@@ -550,14 +550,6 @@ if st.button("Send"):
                     break 
                 attempt += 1
 
-        # Kết quả sau vòng lặp
-        if flag_fail == 0:
-            st.write("**Câu lệnh truy vấn dữ liệu**: ", result_3["query"])
-            st.dataframe(result_4["result"])
-        else:
-            st.write("**Phản hồi của Chatbot**: Tôi không tìm thấy được nội dung bạn yêu cầu, bạn có thể làm rõ hơn câu hỏi được không?")
-        # ---------------------------------------------fix----------------------------------------------------------------------------------
-
         ################
         print("-------------------------Kết quả bước 2, Câu lệnh là :-------------------------", result_3["query"])
         if flag_fail == 0:        
