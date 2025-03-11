@@ -246,8 +246,7 @@ Bạn có danh sách các từ sau về thuật ngữ và các trường dữ li
                     trading book = SKD => ModelSegmentation
                     TB = SKD => ModelSegmentation
                     Gold = Gold => ModelSegmentation
-                    XAU (thuộc: commodity = Gold => ModelSegmentation
-                    giao dịch hàng hóa) = Gold => ModelSegmentation
+                    XAU = Gold => ModelSegmentation
                     TUNGLAN = Cho vay từng lần => ModelSegmentation
                     NONREVOL = Cho vay từng lần => ModelSegmentation
                     NONREVOLVING = Cho vay từng lần => ModelSegmentation
@@ -410,22 +409,22 @@ FULL_DES_JSON = {
     }
   },
   "GSTD_Model Development": {
-    "description": "GSTD_Model Development lưu trữ thông tin về quá trình phát triển, xây dựng mô hình.",
+    "description": "GSTD_Model Development lưu trữ thông tin về quá trình phát triển, xây dựng mô hình. Các mô hình trong danh sách này có thể được coi là đã hoàn thành triển khai, đã hoặc chưa đi vào ứng dụng",
     "fields": {
       "DevelopmentID": "Mã mô hình hoặc mã XDMH, trường primary key",
       "ModelID": "Mã tên mô hình, trường foreign key. Với cùng 01 tên, cùng 01 ModelID có thể có DevelopmentID khác nhau (nghĩa là mô hình này được xây dựng lại, điều chỉnh, nâng cấp) và ModelVersion khác nhau.",
       "ModelDevelopmentUnit": "Đơn vị, bộ phận xây dựng model, ví dụ: Tư vấn Oliver Wyman, Phòng Quant, Phòng QLRRTT, Tư vấn BCG, Phòng ALM.",
-      "ModelVersion": "version của mô hình, thể hiện mô hình nào là mô hình cập nhật hơn với version càng lớn, version = 1 nghĩa là mô hình được xây dựng lần đầu. Với cùng 01 tên, cùng 01 ModelID có thể có DevelopmentID, ModelVersion khác nhau.",
+      "ModelVersion": "version của mô hình, thể hiện mô hình nào là mô hình cập nhật hơn với version càng lớn.",
       "MBO": "MBO của mô hình, ví dụ: QLRRTD, Công nợ, QLRRTT, ALM.",
       "AuthorityApproval": "Cấp thẩm quyền phê duyệt, gồm cấp như HĐQT, CEO, CRO, EBO.",
-      "LifecycleStage": "Giai đoạn hiện tại của model trong vòng đời, gồm các giá trị theo thứ tự: Xây dựng mô hình, Kiểm định mô hình lần đầu, Phê duyệt mô hình, Triển khai mô hình, Đã hoàn thành triển khai nhưng chưa ứng dụng, Ứng dụng mô hình. Mô hình chưa được phê duyệt nghĩa là Chưa hiệu lực",
-      "DevelopmentDate": "Ngày phê duyệt kết quả XDMH, format text YYYYMMDD (lưu ý dạng text, không phải date hay int). Nếu trường này bị null, nghĩa là mô hình chưa hiệu lực",
+      "LifecycleStage": "Giai đoạn hiện tại của model trong vòng đời, gồm các giá trị theo thứ tự: Xây dựng mô hình --> Kiểm định mô hình lần đầu --> Phê duyệt mô hình --> Triển khai mô hình --> Đã hoàn thành triển khai nhưng chưa ứng dụng -->  Ứng dụng mô hình. Mô hình chưa được phê duyệt nghĩa là Chưa hiệu lực",
+      "DevelopmentDate": "Ngày phê duyệt kết quả XDMH, format text YYYYMMDD (lưu ý dạng text, không phải date hay int). Nếu trường này bị null, nghĩa là mô hình chưa hiệu lực, chưa được phê duyệt",
       "TerminationDate": "Ngày phê duyệt dừng ứng dụng. Trường này không NULL nghĩa là mô hình hết hiệu lực. ",
-      "ModelStatus": "Trạng thái hiệu lực của mô hình, có các giá trị: Đang hiệu lực, Chưa hiệu lực, Hết hiệu lực."
+      "ModelStatus": "Trạng thái hiệu lực của mô hình, có các giá trị: Đang hiệu lực, Chưa hiệu lực, Hết hiệu lực. Việc mô hình hết hiệu lực hay không chỉ khi TerminationDate không NULL "
     }
   },
   "GSTD_Model Implementation": {
-    "description": "GSTD_Model Implementation mô tả thông tin việc triển khai, tin học hóa, mô hình nào không có DevelopmentID trong bảng => chưa từng triển khai",
+    "description": "GSTD_Model Implementation mô tả thông tin việc triển khai, tin học hóa, mô hình nào không có DevelopmentID trong bảng => chưa từng triển khai. Tuy nhiên, việc mô hình có xuất hiện trong bảng này hay không; không ảnh hưởng tới giá trị của trường lifecycleStage trong bảng GSTD_Model Development",
     "fields": {
       "ImplementationType": "phân loại tin học hóa, triển khai, ví dụ: Tin học hóa toàn bộ bởi Bộ phận CNTT, Tin học hóa bởi Đơn vị thuê ngoài, Tin học hóa toàn bộ bởi Bộ phận XDMH. Với trường này, bạn có thể trích xuất được thông tin đơn vị làm triển khai, tin học hóa",
       "DevelopmentID": "Mã mô hình, trường foreign key. ",
@@ -458,7 +457,7 @@ FULL_DES_JSON = {
     }
   },
   "GSTD_Model Usage": {
-    "description": "GSTD_Model Usage: Bảng về ứng dụng.",
+    "description": "GSTD_Model Usage: Bảng mô tả các ứng dụng của mô hình. Việc mô hình có xuất hiện trong bảng này hay không; không ảnh hưởng tới giá trị của trường lifecycleStage trong bảng GSTD_Model Development",
     "fields": {
       "DevelopmentID": "Foreign key",
       "UsageID": " primary key , Định danh duy nhất của ứng dụng.",
@@ -501,7 +500,7 @@ FULL_DES_JSON = {
   },
 
   "GSTD_Model Compliance": {
-    "description": "GSTD_Model Compliance: thông tin về việc tuân thủ các quy định và tiêu chuẩn như Basel (Basel có thể có nhiều loại), IFRS9, v.v. Bảng này giúp theo dõi xem mô hình được phát triển theo quy định, tiêu chuẩn nào.",
+    "description": "GSTD_Model Compliance: thông tin về việc tuân thủ các quy định và tiêu chuẩn như Basel (Basel có thể có nhiều loại), IFRS9, v.v. Bảng này giúp theo dõi xem mô hình được phát triển theo quy định, tiêu chuẩn nào. Không phải mô hình nào cũng có thông tin trong bảng này",
     "fields": {
       "ComplianceID": " primary key, Trường định danh, giúp nhận diện từng trường hợp tuân thủ",
        "DevelopmentID": "Foreign key",
