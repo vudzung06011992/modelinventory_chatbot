@@ -130,7 +130,7 @@ checker_tool = QuerySQLCheckerTool(db=db, llm=claude)
 
 # Đọc file mahoa
 current_dir = os.path.dirname(os.path.abspath(__file__))
-DECODE_DF = pd.read_csv(os.path.join(current_dir, "BANGMAHOA.xlsx"))
+DECODE_DF = pd.read_excel(os.path.join(current_dir, "BANGMAHOA.xlsx"))
 
 
 if st.button("Send"):
