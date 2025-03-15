@@ -107,6 +107,10 @@ if "chat_history" not in st.session_state:
 # Nhập câu hỏi từ người dùng
 user_input = st.text_input("Tôi có thể giúp gì cho bạn :")
 db = SQLDatabase.from_uri(SUPABASE_URI)
+toolkit = SQLDatabaseToolkit(db=db, llm=claude)
+tools = toolkit.get_tools()
+from langgraph.prebuilt import create_react_agent
+checker_tool = QuerySQLCheckerTool(db=db, llm=claude)
 
 if st.button("Send"):
     if user_input:
@@ -160,16 +164,15 @@ if st.button("Send"):
 
         ################# III: xây dựng câu lệnh query ################
         
-        toolkit = SQLDatabaseToolkit(db=db, llm=claude)
-        tools = toolkit.get_tools()
+        
 
-        from langgraph.prebuilt import create_react_agent
+        
         info_dict["error"] = None
 
         def write_query(llm_model, info_dict, error=None):
 
             prompt = PromptTemplate.from_template(
-                (TERM_DES_JSON + """
+                (   TERM_DES_JSON + """
                     Bạn là chuyên viên phòng mô hình.
                     Bạn là người cẩn thận, chính xác.       
                     Bạn nhận được thông tin các bảng dữ liệu, các trường dữ liệu liên quan là {input}. 
@@ -448,9 +451,6 @@ if st.button("Send"):
             answer = agent_executor.invoke({"messages": [{"role": "user", "content": info_dict["question"]}]})
 
             def extract_sql_from_final_answer(text):
-                print("text truoc khi extract", text)
-                print("end")
-                                
                 if "Action Input: " in text:   
                     _, _, result = text.rpartition("Action Input: ")
                     result =  result
@@ -467,10 +467,8 @@ if st.button("Send"):
             return {"query": final_sql}
         
         def execute_query(state):
-            
             return {"result": pd.DataFrame(db._execute(state["query"]))}
         
-        # --------------------------------------------------- fix -----------------------------------------------------------
         def fix_query(query, error_massge, llm_model, info_dict):
             fix_prompt = PromptTemplate.from_template(
                 """
@@ -491,7 +489,7 @@ if st.button("Send"):
             }).content
             return fixed_query
         
-        checker_tool = QuerySQLCheckerTool(db=db, llm=claude)
+        
 
         # Tạo query và execute
         attempt = 0
@@ -520,7 +518,7 @@ if st.button("Send"):
                 query = fix_query(query, error_message, claude, info_dict)
                 info_dict["previous_error"] = f"Lỗi cú pháp trước đó: {error_message}. Query đã sửa: {query}"
 
-            result_3["query"] = query       
+            result_3["query"] = query
             if flag_success == 0: # nếu câu lệnh đã được sửa thì thực hiện chạy lại.
                 try:
                     result_4 = execute_query(result_3)
