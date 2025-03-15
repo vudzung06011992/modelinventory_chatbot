@@ -138,8 +138,9 @@ if st.button("Send"):
         print("===============BẮT ĐẦU===============")
         start_time = time.time()
         # Lưu câu hỏi vào bộ nhớ
-        memory.save_context({"input": extract_and_replace(user_input)}, {"output": ""})
         user_input = extract_and_replace(user_input, DECODE_DF)
+        memory.save_context({"input": user_input}, {"output": ""})
+        
 
         ################ I. Thực thi query SQL từ AI với ngữ cảnh hội thoại ################
         result_1 = clarify_question(user_input, st.session_state.chat_history, claude)
