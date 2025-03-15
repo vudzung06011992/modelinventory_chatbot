@@ -556,6 +556,8 @@ if st.button("Send"):
             st.write("**Phản hồi của Chatbot**: Kết quả như sau")
             st.dataframe(pd.DataFrame(result_4["result"]))
         else:
+            query_copy = copy.deepcopy(result_3["query"])
+            st.write("Câu lệnh & Truy vấn dữ liệu: ", query_copy)
             st.write("**Phản hồi của Chatbot**: Tôi chưa tìm thấy nội dung bạn yêu cầu, bạn có thể làm rõ hơn câu hỏi được không?")
 
     # VI. Hiển thị:
