@@ -10,15 +10,11 @@ import copy
 from ultis import *
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from typing_extensions import Annotated
-# from langchain.chat_models import ChatOpenAI, init_chat_model
+
 from langchain.memory import ConversationBufferMemory
 from langchain.sql_database import SQLDatabase
 from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
-from langchain.schema import HumanMessage
-from langchain_community.tools.sql_database.tool import QuerySQLDatabaseTool
-from langgraph.prebuilt import create_react_agent
-import pandas as pd
-from langchain_community.tools.sql_database.tool import QuerySQLCheckerTool
+from langchain_community.tools.sql_database.tool import QuerySQLDatabaseTool, QuerySQLCheckerTool
 
 # Load SQL query system prompt
 query_prompt_template = hub.pull("langchain-ai/sql-query-system-prompt")
@@ -58,7 +54,7 @@ def clarify_question(query, chat_history, llm_model):
                 previous_bot_response = chat['bot']
     
     system = DB_SCHEMA_DESCRIPTION + """
-    You are a DB assistant. Bạn là chuyên viên phòng mô hình, cẩn thận và chính xác.
+    Bạn là chuyên viên phòng mô hình quản trị cơ sở dữ liệu, cẩn thận và chính xác.
     Dựa trên hội thoại trước:
     {context}
     Với câu hỏi hiện tại của User: {question}.
@@ -73,6 +69,27 @@ def clarify_question(query, chat_history, llm_model):
     Kết quả trả ra là JSON với 2 key:
     - "clarified_question": Yêu cầu đã được làm rõ, kết hợp ngữ cảnh nếu cần.
     - "tables": Danh sách các bảng cần dùng.
+
+    Ví dụ:
+    Question: "Thống kê số lượng mô hình LGD bán lẻ"; "clarified_question": Thống kê số lượng mô hình (theo DevelopmentID) có RiskParameter là LGD, RiskType_lv2 là  RRTD bán lẻ"
+    Question: "Thống kê số lượng và kể tên mô hình PD bán buôn"; "clarified_question": Thống kê (theo DevelopmentID) và kể tên số lượng mô hình có RiskParameter là PD, RiskType_lv2 là  RRTD bán buôn"
+    Question: "Thống kê số lượng và kể tên mô hình EAD bán buôn"; "clarified_question": Thống kê (theo DevelopmentID) và kể tên số lượng mô hình có RiskParameter là EAD, RiskType_lv2 là  RRTD bán buôn"
+    Question: "Thống kê số lượng và kể tên mô hình EAD bán buôn"; "clarified_question": Thống kê (theo DevelopmentID) và kể tên số lượng mô hình có RiskParameter là EAD, RiskType_lv2 là  RRTD bán buôn"
+    Question: "Thống kê số lượng RRTT (mô hình cập nhật), còn hiệu lực"; "clarified_question": Thống kê số lượng mô hình có RiskType_lv1 là RRTT, là mô hình cập nhật (ModelVersion lớn nhất) và có ModelStatus là Đang hiệu lực"
+    Question: "Thống kê số lượng RRTD (mô hình cập nhật), còn hiệu lực"; "clarified_question": Thống kê số lượng mô hình có RiskType_lv1 là RRTD, là mô hình cập nhật (ModelVersion lớn nhất) và có ModelStatus là Đang hiệu lực"
+    Question: "Thống kê số lượng mô hình chưa có hiệu lực"; "clarified_question": Thống kê số lượng mô hình có ModelStatus là Chưa hiệu lực"
+    Question: "Thống kê số lượng mô hình bán lẻ theo Basel"; "clarified_question": Thống kê số lượng mô hình (theo DevelopmentID) có RiskType_lv2 là  RRTD bán lẻ, có RegulatoryCompliance chứa từ khóa Basel"
+    Question: "Thống kê số lượng mô hình bán buôn theo i9"; "clarified_question": Thống kê số lượng mô hình (theo DevelopmentID) có RiskType_lv2 là  RRTD bán buôn, có RegulatoryCompliance chứa từ khóa IFRS9"
+    Question: "Thống kê số lượng mô hình bán buôn theo i9"; "clarified_question": Thống kê số lượng mô hình (theo DevelopmentID) có RiskType_lv2 là  RRTD bán buôn, có RegulatoryCompliance chứa từ khóa IFRS9"
+    Question: "Thống kê số lượng mô hình khcn cập nhật nhất, còn hiệu lực"; "clarified_question": Thống kê số lượng mô hình có RiskType_lv2 là RRTT bán lẻ, là mô hình cập nhật (ModelVersion lớn nhất) và có ModelStatus là Đang hiệu lực"
+    Question: "Thống kê số lượng mô hình khcn cập nhật nhất, hết hiệu lực"; "clarified_question": Thống kê số lượng mô hình có RiskType_lv2 là RRTT bán lẻ, là mô hình cập nhật (ModelVersion lớn nhất) và có ModelStatus là Hết hiệu lực"
+    Question: "Kể tên mô hình khcn cập nhật nhất, hết hiệu lực"; "clarified_question": Kể tên các mô hình có  RiskType_lv2 là RRTT bán lẻ, là mô hình cập nhật (cùng ModelID, chỉ chọn mô hình có ModelVersion lớn nhất) và có ModelStatus là Hết hiệu lực"
+    Question: "Kể tên mô hình RRTD đối tác hiện đang trong giai đoạn ứng dụng"; "clarified_question": Kể tên các mô hình có RiskType_lv2 là RRTD đối tác và có LifecycleStage là Ứng dụng mô hình"
+    Question: "Liệt kê các mô hình được triển khai trong năm 2024"; "clarified_question":  kể tên các mô hình được triển khai năm 2024, được xác định bằng ImplementationDate >= 20240101 and <= 20241231.
+    Question: "Thống kê số lượng các mô hình EAD bán lẻ có kết quả kiểm định lần đầu loại 2"; "clarified_question": Thống kê số lượng mô hình có RiskParameter là EAD, RiskType_lv2 là RRTD bán lẻ; các mô hình có Kiểm định lần đầu (ValidationType = "Kiểm định lần đầu") là Loại 2 (ValidationConclusion là Loại 2)
+    Question: "Thống kê số lượng các mô hình EAD bán lẻ có kết quả kiểm định lần đầu loại 2"; "clarified_question": Thống kê số lượng mô hình có RiskParameter là EAD, RiskType_lv2 là RRTD bán lẻ; các mô hình có Kiểm định lần đầu (ValidationType = "Kiểm định lần đầu") là Loại 2 (ValidationConclusion là Loại 2)
+    Question: "Liệt kê các mô hình RRTD có mức độ xếp hạng rủi ro khi XDMH là cao"; "clarified_question": Kể tên các mô hình có RiskType_lv1 là RRTD; các mô hình này có xếp hạng rủi ro mô hình là cao (ModelRiskRating = "Cao") với RatingStage = "Xây dựng mô hình" trong bảng GSTD_Model Risk Rating.
+    Question: "Thống kê số lượng mô hình tổn thất còn hiệu lực có kết quả KĐMH cập nhật nhất loại 2"; "clarify_question": Thống kê số lượng mô hình có ModelStatus là Đang hiệu lực; trong đó, lựa chọn các mô hình có  kết quả kiểm định mô hình (KĐMH) cập nhật nhất loại 2. Cụ thể: Cập nhật nhất: Chỉ lấy kết quả kiểm định có ngày ValidationDate mới nhất cho mỗi mô hình và ValidationConclusion là "Loại 2".
     """
     
     if "làm rõ hơn" in query.lower() and previous_query:
@@ -96,7 +113,6 @@ def clarify_question(query, chat_history, llm_model):
     
     return result
 
-
 # Giao diện Streamlit
 st.title("Model-Inventory AI Chatbot")
 
@@ -112,12 +128,18 @@ tools = toolkit.get_tools()
 from langgraph.prebuilt import create_react_agent
 checker_tool = QuerySQLCheckerTool(db=db, llm=claude)
 
+# Đọc file mahoa
+current_dir = os.path.dirname(os.path.abspath(__file__))
+DECODE_DF = pd.read_csv(os.path.join(current_dir, "BANGMAHOA.xlsx"))
+
+
 if st.button("Send"):
     if user_input:
         print("===============BẮT ĐẦU===============")
         start_time = time.time()
         # Lưu câu hỏi vào bộ nhớ
-        memory.save_context({"input": user_input}, {"output": ""})
+        memory.save_context({"input": extract_and_replace(user_input)}, {"output": ""})
+        user_input = extract_and_replace(user_input, DECODE_DF)
 
         ################ I. Thực thi query SQL từ AI với ngữ cảnh hội thoại ################
         result_1 = clarify_question(user_input, st.session_state.chat_history, claude)
@@ -163,10 +185,6 @@ if st.button("Send"):
         }
 
         ################# III: xây dựng câu lệnh query ################
-        
-        
-
-        
         info_dict["error"] = None
 
         def write_query(llm_model, info_dict, error=None):
@@ -488,8 +506,6 @@ if st.button("Send"):
                 "input": info_dict["input"]
             }).content
             return fixed_query
-        
-        
 
         # Tạo query và execute
         attempt = 0
@@ -507,9 +523,9 @@ if st.button("Send"):
             if "Error" not in check_result and "invalid" not in check_result.lower():
                 try:
                     result_4 = execute_query(result_3)
-                    flag_success = 1
-                    break
-                except Exception as e:
+                    flag_success = 1 # chỉ khi thành công, flag_success = 1
+                    break # nếu đã thành công, break. 
+                except Exception as e: # nếu có lỗi, cần khắc phục.
                     error_message = str(e)
                     query = fix_query(query, error_message, claude, info_dict)
                     info_dict["previous_error"] = f"Lỗi trước đó: {error_message}. Query đã sửa: {query}"
@@ -519,29 +535,27 @@ if st.button("Send"):
                 info_dict["previous_error"] = f"Lỗi cú pháp trước đó: {error_message}. Query đã sửa: {query}"
 
             result_3["query"] = query
-            if flag_success == 0: # nếu câu lệnh đã được sửa thì thực hiện chạy lại.
+            if flag_success == 0: # thực hiện chạy lại câu lệnh đã sửa.
                 try:
                     result_4 = execute_query(result_3)
-                    flag_success == 1
+                    flag_success == 1 # chỉ khi thành công, flag_success = 1
                     break 
                 except Exception as e:
                     error_message = str(e)
-                    info_dict["previous_error"] = f"Lỗi sau khi sửa: {error_message}. Query: {query}"
-
+                    info_dict["previous_error"] = f"Câu lệnh cập nhật là Query: {query}; câu lệnh này gặp lỗi {error_message}."
                     if attempt == max_attempts:
-                        st.error(f"Không thể tạo câu truy vấn hợp lệ sau {max_attempts} lần thử. Lỗi cuối cùng: {error_message}")
                         flag_fail = 1
-                        break 
+                        break # break sau max_attempts lần thử 
                     attempt += 1
         st.write("Hoàn thành kiểm tra CSDL.")
         
-        if flag_fail == 0:        
+        if flag_success == 1:
             query_copy = copy.deepcopy(result_3["query"])
-            st.write("Quá trình trích xuất Câu lệnh & Truy vấn dữ liệu (có thể diễn ra nhiều lần): ", query_copy)
+            st.write("Câu lệnh & Truy vấn dữ liệu: ", query_copy)
             st.write("**Phản hồi của Chatbot**: Kết quả như sau")
             st.dataframe(pd.DataFrame(result_4["result"]))
         else:
-            st.write("**Phản hồi cuối của Chatbot**: Tôi không tìm thấy được nội dung bạn yêu cầu, bạn có thể làm rõ hơn câu hỏi được không?")
+            st.write("**Phản hồi của Chatbot**: Tôi chưa tìm thấy nội dung bạn yêu cầu, bạn có thể làm rõ hơn câu hỏi được không?")
 
     # VI. Hiển thị:
     def remove_newlines(text):

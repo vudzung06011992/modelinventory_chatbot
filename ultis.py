@@ -21,6 +21,44 @@ os.environ["LANGSMITH_API_KEY"] = st.secrets["LANGSMITH_API_KEY"]
 os.environ["LANGSMITH_PROJECT"] = st.secrets["LANGSMITH_PROJECT"]
 os.environ["LANGCHAIN_ENDPOINT"] = st.secrets["LANGCHAIN_ENDPOINT"]
 
+def extract_and_replace(text, code_mapping):
+    """
+    Trích xuất chuỗi từ segment<...> và name<...>, sau đó thay thế theo định dạng yêu cầu
+    
+    Args:
+        text (str): Chuỗi văn bản cần xử lý
+        code_mapping (pd.DataFrame): DataFrame chứa các cột CODE, VALUE, và COLUMN
+    
+    Returns:
+        str: Chuỗi văn bản đã được thay thế
+    """
+
+    # Hàm trích xuất và xử lý các thẻ
+    def process_tag(match, tag_type):
+        
+        tag_content = match.group(1)
+
+        # Tìm hàng tương ứng với CODE trong DataFrame
+        matching_row = code_mapping[code_mapping['CODE'].apply(str.lower) == str.lower(tag_content)]
+        if matching_row.empty:
+            matching_row = code_mapping[code_mapping['VALUE'].apply(str.lower) == str.lower(tag_content)]
+        if not matching_row.empty:
+            value = matching_row['VALUE'].values[0]
+            column = matching_row['COLUMN'].values[0]
+
+            if tag_type == "segment":
+                return f"phân khúc <{value}> (trường {column})"
+            elif tag_type == "name":
+                return f"tên mô hình <{value}> (trường {column})"
+        
+        return match.group(0)  # Giữ nguyên nếu không tìm thấy
+    
+    # Thay thế segment tags, name tags
+    result = re.sub(r'segment<([^>]*)>', lambda m: process_tag(m, "segment"), text)
+    result = re.sub(r'name<([^>]*)>', lambda m: process_tag(m, "name"), result)
+    
+    return result
+
 DB_SCHEMA_DESCRIPTION = """
 Bạn có các file excel/csv về mô hình và trường dữ liệu tương ứng như sau:
 
@@ -518,7 +556,6 @@ FULL_DES_JSON = {
   }
 }
 
-
 GENERAL_DB_QUERY_PROMPT = """
  
         You are an agent designed to interact with a subpabase database.
@@ -548,8 +585,6 @@ Thuật ngữ:
 
 """
 
-
-
 def extract_tables_from_json(json_data, tables_to_extract):
     """
     Hàm trích xuất thông tin từ JSON dựa trên danh sách các bảng cho trước.
@@ -570,3 +605,42 @@ def extract_tables_from_json(json_data, tables_to_extract):
     extracted_data = {table: json_data[table] for table in tables_to_extract if table in json_data}
     
     return extracted_data
+
+import re
+def extract_and_replace(text, code_mapping):
+    """
+    Trích xuất chuỗi từ segment<...> và name<...>, sau đó thay thế theo định dạng yêu cầu
+    
+    Args:
+        text (str): Chuỗi văn bản cần xử lý
+        code_mapping (pd.DataFrame): DataFrame chứa các cột CODE, VALUE, và COLUMN
+    
+    Returns:
+        str: Chuỗi văn bản đã được thay thế
+    """
+    
+    # Hàm trích xuất và xử lý các thẻ
+    def process_tag(match, tag_type):
+        tag_content = match.group(1)
+        
+        # Tìm hàng tương ứng với CODE trong DataFrame
+        matching_row = code_mapping[code_mapping['CODE'] == tag_content]
+        
+        if not matching_row.empty:
+            value = matching_row['VALUE'].values[0]
+            column = matching_row['COLUMN'].values[0]
+            
+            if tag_type == "segment":
+                return f"phân khúc {value} (trường {column})"
+            elif tag_type == "name":
+                return f"tên mô hình {value} (trường {column})"
+                
+        return match.group(0)  # Giữ nguyên nếu không tìm thấy
+    
+    # Thay thế segment tags
+    result = re.sub(r'segment<([^>]*)>', lambda m: process_tag(m, "segment"), text)
+    
+    # Thay thế name tags
+    result = re.sub(r'name<([^>]*)>', lambda m: process_tag(m, "name"), result)
+    
+    return result
