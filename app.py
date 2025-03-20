@@ -1,102 +1,577 @@
-import re
+import os
 import time
-
+import json
+import copy
+import warnings
+from typing import TypedDict, Annotated, List
 import pandas as pd
-import chainlit as cl
-import openai
+import streamlit as st
+import copy
 from ultis import *
-from langchain.sql_database import SQLDatabase
-from langchain_community.tools.sql_database.tool import QuerySQLDatabaseTool
+from langchain_community.agent_toolkits import SQLDatabaseToolkit
+from typing_extensions import Annotated
 
+from langchain.memory import ConversationBufferMemory
+from langchain.sql_database import SQLDatabase
+from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
+from langchain_community.tools.sql_database.tool import QuerySQLDatabaseTool, QuerySQLCheckerTool
+
+# Load SQL query system prompt
+query_prompt_template = hub.pull("langchain-ai/sql-query-system-prompt")
+assert len(query_prompt_template.messages) == 1
+
+warnings.filterwarnings("ignore")
+
+# Cấu hình db
 db = SQLDatabase.from_uri(SUPABASE_URI)
 execute_query_tool = QuerySQLDatabaseTool(db=db)
+print("kết nối db thành công")
 
-decode_table = pd.read_excel("BANGMAHOA.xlsx", engine='openpyxl' )
-@cl.on_message
-async def chat_with_gpt(message: cl.Message):
-    start_time = time.time()
-    # Kiểm tra nếu đã có lịch sử chat trước đó, nếu không thì tạo mới
-    if not cl.user_session.get("conversation_history"):
-        cl.user_session.set("conversation_history", SYSTEM_CONTEXT.copy())
-    print(SYSTEM_CONTEXT)
-    # Lấy lịch sử hội thoại hiện tại
-    conversation_history = cl.user_session.get("conversation_history")
+# Cấu hình LLM
+from langchain_community.chat_models import ChatOpenAI
+openai = ChatOpenAI(model_name="gpt-4")
+claude = init_chat_model("claude-3-7-sonnet-20250219", temperature=0)
 
-    # Thêm tin nhắn người dùng vào hội thoại
-    user_message = decode_keyword_func(message.content, decode_table)
-    conversation_history.append({"role": "user", "content": user_message})
+# Tạo bộ nhớ hội thoại
+memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, k = 5)
 
-    # Gọi API OpenAI để lấy phản hồi
-    response = openai.chat.completions.create(
-        model="gpt-4o",
-        messages=conversation_history
-    )
+# Hàm truy vấn dữ liệu từ Supabase
+from functools import lru_cache
 
-    # Lấy nội dung phản hồi
-    assistant_reply = response.choices[0].message.content
-    print("assistant_reply: ", assistant_reply)
-    # Thêm phản hồi vào lịch sử hội thoại
-    conversation_history.append({"role": "assistant", "content": assistant_reply})
-
-    # Lưu lại hội thoại vào session để duy trì context
-    cl.user_session.set("conversation_history", conversation_history)
-    sql_code = extract_sql_query(assistant_reply)
-    list_column = get_column_name_from_response(assistant_reply)
-    if sql_code:
-        try:
-            print("Running SQL Query:", sql_code)
-            result = execute_query_tool.run(sql_code)
-            data = eval(str(result))
-            df = pd.DataFrame(data, columns=list_column)
-            print("len df: ", len(df))
-            markdown_table = df.to_markdown(index=False)
-            # Sửa lỗi TypeError: chỉ truyền 1 tham số
-            response_time = time.time() - start_time
-            print("response_time: ", response_time)
-            await cl.Message(content=f"**Thời gian phản hồi**:{response_time} giây \n**kết quả truy vấn:**\n \n{markdown_table}\n \n**Câu lệnh SQL:**\n```sql\n{sql_code}\n``` ").send()
-        except Exception as e:
-            await cl.Message({e}).send()
-    else:
-        await cl.Message(assistant_reply).send()
-
-
-
-# Hàm nhận diện đoạn code SQL từ assistant_reply
-def extract_sql_query(text):
-    sql_pattern = r"```sql\n(.*?)\n```"
-    match = re.search(sql_pattern, text, re.DOTALL)
-    return match.group(1) if match else None
-    # Gửi phản hồi về UI Chainlit
-
-def decode_keyword_func(text: str, code_mapping: pd.DataFrame) -> str:
-    def replace_match(match):
-        extracted_text = match.group(1).lower()
-        
-        # Chuyển CODE và VALUE về lowercase để so sánh
-        code_mapping_lower = code_mapping.copy()
-        code_mapping_lower['CODE'] = code_mapping_lower['CODE'].str.lower()
-        code_mapping_lower['VALUE'] = code_mapping_lower['VALUE'].str.lower()
-        
-        # Tìm tất cả các bản ghi có CODE hoặc VALUE khớp với extracted_text
-        records = code_mapping_lower[(code_mapping_lower['CODE'] == extracted_text) | (code_mapping_lower['VALUE'] == extracted_text)]
-        if not records.empty:
-            for _, record in records.iterrows():
-                if record['COLUMN'] == "ModelSegmentation":
-                    return f"có ModelSegmentation là {record['VALUE']}"
-                elif record['COLUMN'] == "ModelName":
-                    return f"có ModelName là {record['VALUE']}"
-        
-        # Nếu không map được, trả về chuỗi gốc không có dấu '
-        return match.group(1)
+def clarify_question(query, chat_history, llm_model):
+    def remove_curly_braces(text):
+        return text.replace("{", "").replace("}", "")
     
-    # Tìm tất cả các chuỗi trong dấu nháy đơn và thay thế từng cái
-    processed_text = re.sub(r"'([^']+)'", replace_match, text)
-    return processed_text
-def get_column_name_from_response(openai_respose):
-    match = re.search(r'list_column:\s*(\[[^\]]*\])', openai_respose)
-    if match:
-    # Tách phần danh sách và chuyển thành list
-        list_column = eval(match.group(1))  # hoặc sử dụng ast.literal_eval(match.group(1)) để an toàn hơn
-        return list_column
+    context = ""
+    previous_query = None
+    previous_bot_response = None
+
+    if chat_history:
+        for chat in reversed(chat_history):
+            context += f" Câu hỏi User: {chat['user']} ==> Bot trả lời: {remove_curly_braces(chat['bot'])} \n"
+            if previous_query is None: 
+                previous_query = chat['user']
+                previous_bot_response = chat['bot']
+    
+    system = DB_SCHEMA_DESCRIPTION + """
+    Bạn là chuyên viên phòng mô hình quản trị cơ sở dữ liệu, cẩn thận và chính xác.
+    Dựa trên hội thoại trước:
+    {context}
+    Với câu hỏi hiện tại của User: {question}.
+    
+    Nhiệm vụ của bạn là:
+    - Diễn giải rõ ràng, chính xác yêu cầu của người dùng hiện tại dựa trên ngữ cảnh hội thoại trước.
+    - Nếu câu hỏi hiện tại yêu cầu "làm rõ hơn" hoặc "sửa lỗi", hãy kết hợp với câu hỏi trước để làm rõ ý định đầy đủ.
+    - Nếu câu hỏi trước có câu lệnh SQL sai (trong phản hồi của bot), hãy ghi nhận lỗi đó và đảm bảo yêu cầu mới tránh lỗi tương tự.
+    - Không đoán mò hoặc thêm thông tin không chắc chắn. Không ghi cụ thể tên trường dữ liệu, không tóm tắt quá mức.
+    - Các bảng dữ liệu cần dùng: bắt buộc có "GSTD_Model Development". Nếu có phân loại theo loại 1, loại 2, loại 3 thì thêm "GSTD_Model Validation". Nếu có phân loại theo Cao, Thấp, Trung bình thì thêm "GSTD_Model Risk Rating".
+    
+    Kết quả trả ra là JSON với 2 key:
+    - "clarified_question": Yêu cầu đã được làm rõ, kết hợp ngữ cảnh nếu cần.
+    - "tables": Danh sách các bảng cần dùng.
+
+    Ví dụ:
+    Question: "Thống kê số lượng mô hình LGD bán lẻ"; "clarified_question": Thống kê số lượng mô hình (theo DevelopmentID) có RiskParameter là LGD, RiskType_lv2 là  RRTD bán lẻ"
+    Question: "Thống kê số lượng và kể tên mô hình PD bán buôn"; "clarified_question": Thống kê (theo DevelopmentID) và kể tên số lượng mô hình có RiskParameter là PD, RiskType_lv2 là  RRTD bán buôn"
+    Question: "Thống kê số lượng và kể tên mô hình EAD bán buôn"; "clarified_question": Thống kê (theo DevelopmentID) và kể tên số lượng mô hình có RiskParameter là EAD, RiskType_lv2 là  RRTD bán buôn"
+    Question: "Thống kê số lượng và kể tên mô hình EAD bán buôn"; "clarified_question": Thống kê (theo DevelopmentID) và kể tên số lượng mô hình có RiskParameter là EAD, RiskType_lv2 là  RRTD bán buôn"
+    Question: "Thống kê số lượng RRTT (mô hình cập nhật), còn hiệu lực"; "clarified_question": Thống kê số lượng mô hình có RiskType_lv1 là RRTT, là mô hình cập nhật (ModelVersion lớn nhất) và có ModelStatus là Đang hiệu lực"
+    Question: "Thống kê số lượng RRTD (mô hình cập nhật), còn hiệu lực"; "clarified_question": Thống kê số lượng mô hình có RiskType_lv1 là RRTD, là mô hình cập nhật (ModelVersion lớn nhất) và có ModelStatus là Đang hiệu lực"
+    Question: "Thống kê số lượng mô hình chưa có hiệu lực"; "clarified_question": Thống kê số lượng mô hình có ModelStatus là Chưa hiệu lực"
+    Question: "Thống kê số lượng mô hình bán lẻ theo Basel"; "clarified_question": Thống kê số lượng mô hình (theo DevelopmentID) có RiskType_lv2 là  RRTD bán lẻ, có RegulatoryCompliance chứa từ khóa Basel"
+    Question: "Thống kê số lượng mô hình bán buôn theo i9"; "clarified_question": Thống kê số lượng mô hình (theo DevelopmentID) có RiskType_lv2 là  RRTD bán buôn, có RegulatoryCompliance chứa từ khóa IFRS9"
+    Question: "Thống kê số lượng mô hình bán buôn theo i9"; "clarified_question": Thống kê số lượng mô hình (theo DevelopmentID) có RiskType_lv2 là  RRTD bán buôn, có RegulatoryCompliance chứa từ khóa IFRS9"
+    Question: "Thống kê số lượng mô hình khcn cập nhật nhất, còn hiệu lực"; "clarified_question": Thống kê số lượng mô hình có RiskType_lv2 là RRTT bán lẻ, là mô hình cập nhật (ModelVersion lớn nhất) và có ModelStatus là Đang hiệu lực"
+    Question: "Thống kê số lượng mô hình khcn cập nhật nhất, hết hiệu lực"; "clarified_question": Thống kê số lượng mô hình có RiskType_lv2 là RRTT bán lẻ, là mô hình cập nhật (ModelVersion lớn nhất) và có ModelStatus là Hết hiệu lực"
+    Question: "Kể tên mô hình khcn cập nhật nhất, hết hiệu lực"; "clarified_question": Kể tên các mô hình có  RiskType_lv2 là RRTT bán lẻ, là mô hình cập nhật (cùng ModelID, chỉ chọn mô hình có ModelVersion lớn nhất) và có ModelStatus là Hết hiệu lực"
+    Question: "Kể tên mô hình RRTD đối tác hiện đang trong giai đoạn ứng dụng"; "clarified_question": Kể tên các mô hình có RiskType_lv2 là RRTD đối tác và có LifecycleStage là Ứng dụng mô hình"
+    Question: "Liệt kê các mô hình được triển khai trong năm 2024"; "clarified_question":  kể tên các mô hình được triển khai năm 2024, được xác định bằng ImplementationDate >= 20240101 and <= 20241231.
+    Question: "Thống kê số lượng các mô hình EAD bán lẻ có kết quả kiểm định lần đầu loại 2"; "clarified_question": Thống kê số lượng mô hình có RiskParameter là EAD, RiskType_lv2 là RRTD bán lẻ; các mô hình có Kiểm định lần đầu (ValidationType = "Kiểm định lần đầu") là Loại 2 (ValidationConclusion là Loại 2)
+    Question: "Thống kê số lượng các mô hình EAD bán lẻ có kết quả kiểm định lần đầu loại 2"; "clarified_question": Thống kê số lượng mô hình có RiskParameter là EAD, RiskType_lv2 là RRTD bán lẻ; các mô hình có Kiểm định lần đầu (ValidationType = "Kiểm định lần đầu") là Loại 2 (ValidationConclusion là Loại 2)
+    Question: "Liệt kê các mô hình RRTD có mức độ xếp hạng rủi ro khi XDMH là cao"; "clarified_question": Kể tên các mô hình có RiskType_lv1 là RRTD; các mô hình này có xếp hạng rủi ro mô hình là cao (ModelRiskRating = "Cao") với RatingStage = "Xây dựng mô hình" trong bảng GSTD_Model Risk Rating.
+    Question: "Thống kê số lượng mô hình tổn thất còn hiệu lực có kết quả KĐMH cập nhật nhất loại 2"; "clarify_question": Thống kê số lượng mô hình có ModelStatus là Đang hiệu lực; trong đó, lựa chọn các mô hình có  kết quả kiểm định mô hình (KĐMH) cập nhật nhất loại 2. Cụ thể: Cập nhật nhất: Chỉ lấy kết quả kiểm định có ngày ValidationDate mới nhất cho mỗi mô hình và ValidationConclusion là "Loại 2".
+    """
+    
+    if "làm rõ hơn" in query.lower() and previous_query:
+        human = f"Yêu cầu làm rõ hơn thông tin từ câu hỏi trước: '{previous_query}'. Câu hỏi hiện tại: {query}"
+    elif "sai rồi" in query.lower() and previous_bot_response and "SELECT" in previous_bot_response:
+        human = f"Yêu cầu sửa lỗi từ câu hỏi trước: '{previous_query}' với câu lệnh SQL trước đó: '{previous_bot_response}'. Câu hỏi hiện tại: {query}"
     else:
-        return [0]
+        human = "{question}"
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system),
+        ("human", human)
+    ])
+
+    chain = prompt | llm_model
+    tmp = chain.invoke({
+        "context": context,
+        "question": query
+    })
+    result = tmp.content
+    
+    return result
+
+# Giao diện Streamlit
+st.title("Model-Inventory AI Chatbot")
+
+# Lưu hội thoại trong session
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
+# Nhập câu hỏi từ người dùng
+user_input = st.text_input("Tôi có thể giúp gì cho bạn :")
+db = SQLDatabase.from_uri(SUPABASE_URI)
+toolkit = SQLDatabaseToolkit(db=db, llm=claude)
+tools = toolkit.get_tools()
+from langgraph.prebuilt import create_react_agent
+checker_tool = QuerySQLCheckerTool(db=db, llm=claude)
+
+# Đọc file mahoa
+current_dir = os.path.dirname(os.path.abspath(__file__))
+DECODE_DF = pd.read_excel(os.path.join(current_dir, "BANGMAHOA.xlsx"))
+
+
+if st.button("Send"):
+    if user_input:
+        print("===============BẮT ĐẦU===============")
+        start_time = time.time()
+        # Lưu câu hỏi vào bộ nhớ
+        user_input = extract_and_replace(user_input, DECODE_DF)
+        memory.save_context({"input": user_input}, {"output": ""})
+        
+
+        ################ I. Thực thi query SQL từ AI với ngữ cảnh hội thoại ################
+        result_1 = clarify_question(user_input, st.session_state.chat_history, claude)
+    
+        print("-------------------------Kết quả bước 1: -------------------------\n", result_1)
+
+        # tách thông tin từ kết quả trả về
+        if isinstance(result_1, dict):
+            print("result_1 đã là dictionary, không cần json.loads()")
+        else:
+            import re
+            match = re.search(r'\{.*\}', result_1, re.DOTALL)
+            result_1 = match.group(0)
+            result_1 = result_1.replace("\n", "  ")
+            result_1 = json.loads(result_1)
+
+        clarified_question = result_1["clarified_question"]
+        st.write("**câu hỏi được làm rõ**: ", clarified_question)
+        tables_to_extract = result_1["tables"]
+
+        ################ II. Extract thông tin cần thiết ################
+        
+        def extract_tables_from_json(json_data, tables_to_extract):
+            """
+            Hàm trích xuất thông tin từ JSON dựa trên danh sách các bảng cho trước.
+            
+            Args:
+                json_data (str or dict): Dữ liệu JSON dưới dạng chuỗi hoặc dictionary.
+                tables_to_extract (list): Danh sách các bảng cần trích xuất.
+            Returns:
+                dict: Dictionary chứa dữ liệu của các bảng được yêu cầu.
+            """
+            # Nếu đầu vào là chuỗi JSON, chuyển đổi thành dictionary
+            if isinstance(json_data, str):
+                json_data = json.loads(json_data)
+            # Lọc các bảng theo danh sách yêu cầu
+            extracted_data = {table: json_data[table] for table in tables_to_extract if table in json_data}
+            return extracted_data
+
+        info_dict = {
+            "question": clarified_question,
+            "input": extract_tables_from_json(FULL_DES_JSON, tables_to_extract)    
+        }
+
+        ################# III: xây dựng câu lệnh query ################
+        info_dict["error"] = None
+
+        def write_query(llm_model, info_dict, error=None):
+
+            prompt = PromptTemplate.from_template(
+                (   TERM_DES_JSON + """
+                    Bạn là chuyên viên phòng mô hình.
+                    Bạn là người cẩn thận, chính xác.       
+                    Bạn nhận được thông tin các bảng dữ liệu, các trường dữ liệu liên quan là {input}. 
+                    Bạn hãy xây dựng câu lệnh query {dialect} cho phù hợp với yêu cầu người dùng. 
+                    You have access to the following tools:{tools}
+
+                    Bạn có danh sách các từ sau về thuật ngữ và các trường dữ liệu tương ứng để xây dựng query
+                    CODE = Phân khúc, mô hình => TRƯỜNG
+                    Large Corp = Doanh nghiệp lớn => ModelSegmentation
+                    LC = Doanh nghiệp lớn => ModelSegmentation
+                    Mid Corp = Doanh nghiệp trung bình => ModelSegmentation
+                    MC = Doanh nghiệp trung bình => ModelSegmentation
+                    FDI = Doanh nghiệp FDI => ModelSegmentation
+                    New Corp = Doanh nghiệp mới thành lập => ModelSegmentation
+                    NC = Doanh nghiệp mới thành lập => ModelSegmentation
+                    Local Bank = Ngân hàng nội địa => ModelSegmentation
+                    LB = Ngân hàng nội địa => ModelSegmentation
+                    Project Finance = Cấp tín dụng tài trợ dự án => ModelSegmentation
+                    PF = Cấp tín dụng tài trợ dự án => ModelSegmentation
+                    KHDN = KHDN => ModelSegmentation
+                    CORP = KHDN => ModelSegmentation
+                    Cho vay không tuần hoàn trong hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
+                    NONR trong hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
+                    NONREVOL trong hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
+                    NONREVOLVING trong hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
+                    Cho vay không tuần hoàn còn hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
+                    NONR còn hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
+                    NONREVOL còn hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
+                    NONREVOLVING còn hiệu lực giải ngân. = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
+                    REV trong hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
+                    REVOL trong hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
+                    REVOLVING trong hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
+                    
+                    REV còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
+                    REVOL còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
+                    REVOLVING còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
+                    TTTM trong hiệu lực giải ngân = TTTM tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
+                    TTTM còn hiệu lực giải ngân = TTTM tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
+                    CC trong hiệu lực giải ngân = Thẻ tín dụng trong hiệu lực giải ngân => ModelSegmentation
+                    CARD trong hiệu lực giải ngân = Thẻ tín dụng trong hiệu lực giải ngân => ModelSegmentation
+                    CC còn hiệu lực giải ngân = Thẻ tín dụng trong hiệu lực giải ngân => ModelSegmentation
+                    CARD còn hiệu lực giải ngân = Thẻ tín dụng trong hiệu lực giải ngân => ModelSegmentation
+                    hết hiệu lực giải ngân = Cho vay tuần hoàn hết hiệu lực giải ngân + Cho vay không tuần hoàn hết hiệu lực giải ngân + Cho vay không tuần hoàn không còn hạn mức tín dụng chưa sử dụng => ModelSegmentation
+                    ngoài hiệu lực giải ngân = Cho vay tuần hoàn hết hiệu lực giải ngân + Cho vay không tuần hoàn hết hiệu lực giải ngân + Cho vay không tuần hoàn không còn hạn mức tín dụng chưa sử dụng => ModelSegmentation
+                    Normal FDI = FDI thông thường => ModelSegmentation
+                    NormalFDI  = FDI thông thường => ModelSegmentation
+                    Potential FDI = FDI tiềm năng => ModelSegmentation
+                    PotentialFDI = FDI tiềm năng => ModelSegmentation
+                    NME = Doanh nghiệp thông thường theo CR => ModelSegmentation
+                    MRE = Doanh nghiệp siêu nhỏ theo CR => ModelSegmentation
+                    SUE = Doanh nghiệp mới thành lập theo CR => ModelSegmentation
+                    KOXH = Doanh nghiệp không xếp hạng => ModelSegmentation
+                    Loan TF KHDN = Cho vay + Tài trợ thương mại KHDN => ModelSegmentation
+                    Loan TF CORP = Cho vay + Tài trợ thương mại KHDN => ModelSegmentation
+                    RSME = Doanh nghiệp Bán lẻ vừa và nhỏ (chỉ bao gồm các khách hàng thuộc quản lý trên Sổ bán buôn) => ModelSegmentation
+                    KOXH (PD) = Doanh nghiệp không có xếp hạng theo PD => ModelSegmentation
+                    RSME = Doanh nghiệp Bán lẻ vừa và nhỏ => ModelSegmentation
+                    PF = Cấp tín dụng tài trợ dự án (PF) => ModelSegmentation
+                    OTHSL = Cho vay chuyên biệt khác Tài trợ dự án => ModelSegmentation
+                    REV trong hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    REVOL trong hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    REVOLVING trong hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    
+                    REV còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation"
+                    REVOL còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    REVOLVING còn hiệu lực giải ngân = Cho vay tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    CORP CARD = Thẻ tín dụng KHDN => ModelSegmentation
+                    CORP CC = Thẻ tín dụng KHDN => ModelSegmentation
+                    CARD CORP = Thẻ tín dụng KHDN => ModelSegmentation
+                    CC CORP = Thẻ tín dụng KHDN => ModelSegmentation
+                    TTTM REVOL trong hiệu lực giải ngân = TTTM tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    TTTM REVOLVING trong hiệu lực giải ngân = TTTM tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    TTTM REV trong hiệu lực giải ngân = TTTM tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    TTTM REVOL còn hiệu lực giải ngân = TTTM tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    TTTM REVOLVING còn hiệu lực giải ngân = TTTM tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    TTTM REV còn hiệu lực giải ngân = TTTM tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    Cho vay không tuần hoàn trong hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    NONR trong hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    NONREVOL trong hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    NONREVOLVING trong hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    Cho vay không tuần hoàn còn hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    NONR còn hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    NONREVOL còn hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    NONREVOLVING còn hiệu lực giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân KHDN => ModelSegmentation
+                    FB, foreign bank = Ngân hàng nước ngoài => ModelSegmentation
+                    NBCI = Tổ chức tín dụng phi ngân hàng => ModelSegmentation
+                    NCFI = Định chế tài chính phi tín dụng => ModelSegmentation
+                    NCFI - NONREV - LOAN = Định chế tài chính phi tín dụng - Cho vay không tuần hoàn/ tuần hoàn hết hiệu lực giải ngân => ModelSegmentation
+                    NCFI NONREV LOAN = Định chế tài chính phi tín dụng - Cho vay không tuần hoàn/ tuần hoàn hết hiệu lực giải ngân => ModelSegmentation
+                    NCFI NONREVOLVING LOAN = Định chế tài chính phi tín dụng - Cho vay không tuần hoàn/ tuần hoàn hết hiệu lực giải ngân => ModelSegmentation
+                    NCFI LOAN NONREV = Định chế tài chính phi tín dụng - Cho vay không tuần hoàn/ tuần hoàn hết hiệu lực giải ngân => ModelSegmentation
+                    NCFI LOANNONREV = Định chế tài chính phi tín dụng - Cho vay không tuần hoàn/ tuần hoàn hết hiệu lực giải ngân => ModelSegmentation
+                    NCFI - CARD = Định chế tài chính phi tín dụng - Thẻ tín dụng => ModelSegmentation
+                    NCFI CARD = Định chế tài chính phi tín dụng - Thẻ tín dụng => ModelSegmentation
+                    NCFI CC = Định chế tài chính phi tín dụng - Thẻ tín dụng => ModelSegmentation
+                    NCFI-CC = Định chế tài chính phi tín dụng - Thẻ tín dụng => ModelSegmentation
+                    NCFI - REV - LOAN = Định chế tài chính phi tín dụng - Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
+                    NCFI REV LOAN = Định chế tài chính phi tín dụng - Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
+                    NCFI REVOLVING LOAN = Định chế tài chính phi tín dụng - Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
+                    NCFI loanREV; = Định chế tài chính phi tín dụng - Cho vay tuần hoàn trong hiệu lực giải ngân => ModelSegmentation
+                    NCFI - TF = Định chế tài chính phi tín dụng - TTTM tuần hoàn/ tuần trong hiệu lực giải ngân => ModelSegmentation
+                    NCFI TF = Định chế tài chính phi tín dụng - TTTM tuần hoàn/ tuần trong hiệu lực giải ngân => ModelSegmentation
+                    NCFI TTTM = Định chế tài chính phi tín dụng - TTTM tuần hoàn/ tuần trong hiệu lực giải ngân => ModelSegmentation
+                    NCFI-TTTM = Định chế tài chính phi tín dụng - TTTM tuần hoàn/ tuần trong hiệu lực giải ngân => ModelSegmentation
+                    IB = Cho vay Cá nhân sản xuất kinh doanh => ModelSegmentation
+                    ibiz = Cho vay Cá nhân sản xuất kinh doanh => ModelSegmentation
+                    SXKD = Cho vay Cá nhân sản xuất kinh doanh => ModelSegmentation
+                    RES = Cho vay bất động sản => ModelSegmentation
+                    RE = Cho vay bất động sản => ModelSegmentation
+                    BĐS = Cho vay bất động sản => ModelSegmentation
+                    BDS = Cho vay bất động sản => ModelSegmentation
+                    cho vay BĐS = Cho vay bất động sản => ModelSegmentation
+                    CSE = Cho vay tiêu dùng có TSBĐ => ModelSegmentation
+                    CONSUMER-SE = Cho vay tiêu dùng có TSBĐ => ModelSegmentation
+                    CONS = Cho vay tiêu dùng có TSBĐ => ModelSegmentation
+                    CVTD có TSBĐ = Cho vay tiêu dùng có TSBĐ => ModelSegmentation
+                    cvtd secured = Cho vay tiêu dùng có TSBĐ => ModelSegmentation
+                    cho vay SXKD = Cho vay tiêu dùng có TSBĐ => ModelSegmentation
+                    CONSUMER-UNSE = Cho vay tiêu dùng không có TSBĐ => ModelSegmentation
+                    CUS = Cho vay tiêu dùng không có TSBĐ => ModelSegmentation
+                    UNSEC = Cho vay tiêu dùng không có TSBĐ => ModelSegmentation
+                    cvtd không tsbđ = Cho vay tiêu dùng không có TSBĐ => ModelSegmentation
+                    cvtd unsecured = Cho vay tiêu dùng không có TSBĐ => ModelSegmentation
+                    CARD = Thẻ tín dụng => ModelSegmentation
+                    CC = Thẻ tín dụng => ModelSegmentation
+                    CREDIT CARD = Thẻ tín dụng => ModelSegmentation
+                    CAR = Cho vay mua ô tô/ xe máy để tiêu dùng => ModelSegmentation
+                    AUTO = Cho vay mua ô tô/ xe máy để tiêu dùng => ModelSegmentation
+                    ô tô = Cho vay mua ô tô/ xe máy để tiêu dùng => ModelSegmentation
+                    oto = Cho vay mua ô tô/ xe máy để tiêu dùng => ModelSegmentation
+                    FX = FX => ModelSegmentation
+                    ngoại tệ = FX => ModelSegmentation
+                    ngoại hối = FX => ModelSegmentation
+                    IRS = IRS => ModelSegmentation
+                    interest rate swap = IRS => ModelSegmentation
+                    hợp đồng hoán đổi lãi suất = IRS => ModelSegmentation
+                    hoán đổi lãi suất. IRS thuộc phái sinh lãi suất (PSLS) = IRS => ModelSegmentation
+                    CCS = CCS => ModelSegmentation
+                    cross currency swap = CCS => ModelSegmentation
+                    hợp đồng hoán đổi ngoại tệ = CCS => ModelSegmentation
+                    hoán đổi ngoại tệ. CCS thuộc phái sinh lãi suất (PSLS) = CCS => ModelSegmentation
+                    SKD = SKD => ModelSegmentation
+                    sổ kinh doanh = SKD => ModelSegmentation
+                    trading book = SKD => ModelSegmentation
+                    TB = SKD => ModelSegmentation
+                    Gold = Gold => ModelSegmentation
+                    XAU = Gold => ModelSegmentation
+                    TUNGLAN = Cho vay từng lần => ModelSegmentation
+                    NONREVOL = Cho vay từng lần => ModelSegmentation
+                    NONREVOLVING = Cho vay từng lần => ModelSegmentation
+                    NONR = Cho vay từng lần => ModelSegmentation
+                    NONRE = Cho vay từng lần => ModelSegmentation
+                    Cho vay hạn mức = Cho vay hạn mức => ModelSegmentation
+                    REVOLVING = Cho vay hạn mức => ModelSegmentation
+                    REV = Cho vay hạn mức => ModelSegmentation
+                    REVOL = Cho vay hạn mức => ModelSegmentation
+                    OTH = Cho vay khác => ModelSegmentation
+                    cho vay OTH = Cho vay khác => ModelSegmentation
+                    CSE = Cho vay tiêu dùng có tài sản bảo đảm => ModelSegmentation
+                    CONSUMER-SE = Cho vay tiêu dùng có tài sản bảo đảm => ModelSegmentation
+                    CONS = Cho vay tiêu dùng có tài sản bảo đảm => ModelSegmentation
+                    CONSUMER-UNSE = Cho vay tiêu dùng không có tài sản bảo đảm => ModelSegmentation
+                    CUS = Cho vay tiêu dùng không có tài sản bảo đảm => ModelSegmentation
+                    UNSEC = Cho vay tiêu dùng không có tài sản bảo đảm => ModelSegmentation
+                    CAR = Cho vay mua ô tô => ModelSegmentation
+                    AUTO = Cho vay mua ô tô => ModelSegmentation
+                    ô tô = Cho vay mua ô tô => ModelSegmentation
+                    oto = Cho vay mua ô tô => ModelSegmentation
+                    cho vay ô tô = Cho vay mua ô tô => ModelSegmentation
+                    UNRATED = Các khoản vay không được xếp hạng => ModelSegmentation
+                    UNRATE = Các khoản vay không được xếp hạng => ModelSegmentation
+                    UNRATED LOAN = Các khoản vay không được xếp hạng => ModelSegmentation
+                    UNRATE LOAN = Các khoản vay không được xếp hạng => ModelSegmentation
+                    khoản vay UNRATE = Các khoản vay không được xếp hạng => ModelSegmentation
+                    khoản vay UNRATED = Các khoản vay không được xếp hạng => ModelSegmentation
+                    LoanRevCardODTF = Cho vay tuần hoàn, thẻ tín dụng và sản phẩm thấu chi, tài trợ thương mại => ModelSegmentation
+                    BEEL KHCN = Khoản vay đã vỡ nợ phân khúc KHCN => ModelSegmentation
+                    BB = Khách hàng bán buôn => ModelSegmentation
+                    RRTD_BB = Khách hàng bán buôn => ModelSegmentation
+                    SME = Doanh nghiệp Bán lẻ vừa và nhỏ (chỉ bao gồm các khách hàng thuộc quản lý trên Sổ bán lẻ) => ModelSegmentation
+                    Deposit Loan Repo  = Deposit Loan Repo => ModelSegmentation
+                    MBF = Mô hình sử dụng dữ liệu thay thế  => ModelSegmentation
+                    MobiFone = Mô hình sử dụng dữ liệu thay thế  => ModelSegmentation
+                    Alternative data = Mô hình sử dụng dữ liệu thay thế  => ModelSegmentation
+                    alternative = Mô hình sử dụng dữ liệu thay thế  => ModelSegmentation
+                    BL (chỉ áp dụng cho mô hình có RiskParameter = Stress test)= Khách hàng Bán lẻ => ModelSegmentation   (lưu ý, chỉ áp dụng cho mô hình có RiskParameter = Stress test)
+                    Retail (chỉ áp dụng cho mô hình có RiskParameter = Stress test) = Khách hàng Bán lẻ => ModelSegmentation (lưu ý, chỉ áp dụng cho mô hình có RiskParameter = Stress test)
+                    TPCP = Định giá sản phẩm Giấy tờ có giá do Kho bạc Nhà nước phát hành => ModelName
+                    GOV BOND = Định giá sản phẩm Giấy tờ có giá do Kho bạc Nhà nước phát hành => ModelName
+                    TPCPBL/ CQDP = Định giá sản phẩm Giấy tờ có giá được Chính phủ bảo lãnh/Chính quyền địa phương phát hành => ModelName
+                    TPCPBL = Định giá sản phẩm Giấy tờ có giá được Chính phủ bảo lãnh/Chính quyền địa phương phát hành => ModelName
+                    CQDP = Định giá sản phẩm Giấy tờ có giá được Chính phủ bảo lãnh/Chính quyền địa phương phát hành => ModelName
+                    TPCPBL CQDP = Định giá sản phẩm Giấy tờ có giá được Chính phủ bảo lãnh/Chính quyền địa phương phát hành => ModelName
+                    Mô hình định giá Bond FI = Mô hình Định giá GTCG do TCTD phát hành => ModelName
+                    Mô hình định giá  FI Bond = Mô hình Định giá GTCG do TCTD phát hành => ModelName
+                    mô hình MtM = Mô hình định giá IRS VND => ModelName
+                    mô hình MTM = Mô hình định giá IRS VND => ModelName
+                    mô hình mark to market = Mô hình định giá IRS VND => ModelName
+                    mô hình USD SOFR ON = Mô hình định giá IRS USD tham chiếu SOFR ON => ModelName
+                    mô hình USD SOFRON = Mô hình định giá IRS USD tham chiếu SOFR ON => ModelName
+                    mô hình USD SOFR = Mô hình định giá IRS USD tham chiếu Term SOFR => ModelName
+                    mô hình USDR TERM SOFR = Mô hình định giá IRS USD tham chiếu Term SOFR => ModelName
+                    mô hình CCS SOFR ON = Mô hình định giá CCS USD/VND với chân USD thả nổi tham chiếu SOFR ON daily compounded in Arrears => ModelName
+                    mô hình CCS SOFR = Mô hình định giá CCS USD/VND với chân USD thả nổi tham chiếu Term SOFR => ModelName
+                    mô hình Var FX = Mô hình VaR cho danh mục kinh doanh ngoại tệ => ModelName
+                    mô hình Var FX SKD = Mô hình VaR cho danh mục kinh doanh ngoại tệ => ModelName
+                    mô hình Var FX tự doanh = Mô hình VaR cho danh mục kinh doanh ngoại tệ => ModelName
+                    mô hình VaR GTCG = Mô hình VaR lịch sử GTCG => ModelName
+                    mô hình VaR Bond = Mô hình VaR lịch sử GTCG => ModelName
+                    mô hình VaR PSLS = Mô hình VaR phái sinh lãi suất => ModelName
+                    mô hình VaR tổng = Mô hình VaR tổng Sổ kinh doanh => ModelName
+                    mô hình VaR.Total = Mô hình VaR tổng Sổ kinh doanh => ModelName
+                    mô hình Var total = Mô hình VaR tổng Sổ kinh doanh => ModelName
+                    MTM GOLD = Mô hình định giá danh mục vàng miếng tại VCB => ModelName
+                    Add-on FX JPY/VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
+                    Add on FX JPY VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
+                    Addon FX JPY/VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
+                    Addon FX JPY-VND = Mô hình định giá cho các giao dịch kinh doanh ngoại hối đối với cặp JPY/VND kỳ hạn trên 1 năm đến 2 năm => ModelName
+                    MtM FI BOND CP 1Y = Mô hình định giá GTCG do TCTD phát hành có quyền chọn call put đồng thời kỳ hạn từ 1 năm trở xuống trên sổ kinh doanh	 => ModelName
+                    MtM FI BOND call put 1Y = Mô hình định giá GTCG do TCTD phát hành có quyền chọn call put đồng thời kỳ hạn từ 1 năm trở xuống trên sổ kinh doanh	 => ModelName
+                    MtM GTCG SNH = Mô hình định giá giao dịch GTCG TCTD SNH => ModelName
+                    MtM GTCG BB = Mô hình định giá giao dịch GTCG TCTD SNH => ModelName
+                    MtM GTCG ALM = Mô hình định giá giao dịch GTCG TCTD SNH => ModelName
+                    MtM CPCP USD SNH = Mô hình định giao dịch TPCP USD SNH => ModelName
+                    mô hình Var FI Bond = Mô hình VaR lịch sử GTCG do TCTD phát hành => ModelName
+                    mô hình Var Bond FI = Mô hình VaR lịch sử GTCG do TCTD phát hành => ModelName
+                    Cho vay không tuần hoàn còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
+                    NONR còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
+                    NONREVOL còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
+                    NONREVOLVING còn có thể giải ngân = Cho vay không tuần hoàn trong hiệu lực giải ngân và còn hạn mức chưa sử dụng => ModelSegmentation
+                    ------------------------------------
+                    Lưu ý:
+                    - TÊN CÁC BẢNG, CỘT PHẢI ĐỂ TRONG ""
+                    - Việc mapping các bảng dựa trên DevelopmentID. Trường DevelopmenID không phải là ModelID. Không được dùng DevelopmenID = ModelID
+                    - Bảng GSTD_Model Inventory không có DevelopmentID.
+                    - Câu lệnh phải tuân thủ nguyên tắc {dialect} trong Supabase.
+                    - Các TRƯỜNG DATE (tên trường có chữ date) phải được chuyển đổi về int với giá trị không null, rồi mới sử dụng. Lưu ý: các trường này có thể tồn tại giá trị NULL hoặc missing.
+                    - Bạn phải rà soát câu hỏi người dùng để đảm bảo câu lệnh trả về kết quả chính xác.
+                    - Đừng tự thêm điều kiện where mà người dùng không cần
+                    - Không thêm ký tự \n, \ không cần thiết.
+                    - Các trường text, thực hiện lấy giá trị lowcase để thực hiện điều kiện lọc.
+                    - Nếu chủ thể hỏi về mô hình, bạn phải liệt kê thông tin theo DevelopmentID (không phải theo Model ID): ví dụ 
+                        số lượng Mô Hình Bán Buôn Cho Doanh Nghiệp Vừa Theo Chuẩn Basel là 02 với DevelopmentID là 32, 33
+                    - {previous_error}
+                    
+                    Bạn chỉ được trả ra câu lệnh query (không thêm bất kỳ thông tin nào khác) mà phải chạy được. Only return the Query, no explanation, no description.
+                    Ví dụ: 
+                    Đếm số lượng mô hình có loại mô hình là MC ==> câu trả lời đúng là SELECT COUNT(DISTINCT "DevelopmentID") FROM "GSTD_Model Development" d JOIN "GSTD_Model Inventory" i ON d."ModelID" = i."ModelID" WHERE LOWER(i."ModelSegmentation") = LOWER('Doanh nghiệp trung bình')
+                    
+                    Use the following format:
+                    Question: the input question you must answer
+                    Thought: you should always think about what to do
+                    Action: the action to take, should be one of {tools}
+                    Action Input: the input to the action
+                    Observation: the result of the action
+                    ... (this Thought/Action/Action Input/Observation can repeat 2 times)
+                    Thought: I now know the final answer
+                    Final Answer: the final answer to the original input question. final answer chỉ là mã lập trình, không được có thêm gì khác. final answer chỉ là mã lập trình, không được có thêm gì khác. 
+                    
+                    Begin!
+                    Question: {question}
+                """)
+            )
+
+            # Format prompt với dữ liệu thực tế
+            formatted_prompt = prompt.format(
+                dialect="PostgreSQL",
+                question=info_dict["question"],
+                input=info_dict["input"],
+                previous_error = info_dict["previous_error"],
+                tools= """["QuerySQLDatabaseTool", "InfoSQLDatabaseTool", "ListSQLDatabaseTool", "QuerySQLCheckerTool"]"""
+            )
+
+            # Tạo Agent Executor (Dùng Prompt ĐÃ FORMAT)
+            agent_executor = create_react_agent(llm_model, tools, prompt=formatted_prompt)
+            answer = agent_executor.invoke({"messages": [{"role": "user", "content": info_dict["question"]}]})
+
+            def extract_sql_from_final_answer(text):
+                if "Action Input: " in text:   
+                    _, _, result = text.rpartition("Action Input: ")
+                    result =  result
+                else: 
+                    result = text
+                if "Final Answer:" in result:
+                    _, _, result = result.rpartition("Final Answer: ")
+                    result =  result
+                if "Observation" in result:
+                    result = result.split("Observation")[0]
+                return result
+
+            final_sql = extract_sql_from_final_answer(answer["messages"][1].content)
+            return {"query": final_sql}
+        
+        def execute_query(state):
+            return {"result": pd.DataFrame(db._execute(state["query"]))}
+        
+        def fix_query(query, error_massge, llm_model, info_dict):
+            fix_prompt = PromptTemplate.from_template(
+                """
+                    Bạn là chuyên gia SQL. Một câu truy vấn sau đây đã gặp lỗi:
+                    Query: {query}
+                    Lỗi: {error_message}
+                    
+                    Dựa trên thông tin ngữ cảnh: {input}
+                    Hãy sửa lại câu truy vấn để nó chạy được trên PostgreSQL (Supabase).
+                    Chỉ trả ra câu truy vấn đã sửa, không giải thích.
+                """
+            )
+            chain = fix_prompt | llm_model
+            fixed_query = chain.invoke({
+                "query": query,
+                "error_message": error_message,
+                "input": info_dict["input"]
+            }).content
+            return fixed_query
+
+        # Tạo query và execute
+        attempt = 0
+        error_message = None
+        max_attempts = 2
+        info_dict["previous_error"] = ""
+        flag_fail = 0
+        flag_success = 0
+        while attempt <= max_attempts:
+
+            result_3 = write_query(claude, info_dict)
+            query = result_3["query"]
+            check_result = checker_tool.invoke(query)
+
+            if "Error" not in check_result and "invalid" not in check_result.lower():
+                try:
+                    result_4 = execute_query(result_3)
+                    flag_success = 1 # chỉ khi thành công, flag_success = 1
+                    break # nếu đã thành công, break. 
+                except Exception as e: # nếu có lỗi, cần khắc phục.
+                    error_message = str(e)
+                    query = fix_query(query, error_message, claude, info_dict)
+                    info_dict["previous_error"] = f"Lỗi trước đó: {error_message}. Query đã sửa: {query}"
+            else:
+                error_message = check_result
+                query = fix_query(query, error_message, claude, info_dict)
+                info_dict["previous_error"] = f"Lỗi cú pháp trước đó: {error_message}. Query đã sửa: {query}"
+
+            result_3["query"] = query
+            if flag_success == 0: # thực hiện chạy lại câu lệnh đã sửa.
+                try:
+                    result_4 = execute_query(result_3)
+                    flag_success == 1 # chỉ khi thành công, flag_success = 1
+                    break 
+                except Exception as e:
+                    error_message = str(e)
+                    info_dict["previous_error"] = f"Câu lệnh cập nhật là Query: {query}; câu lệnh này gặp lỗi {error_message}."
+                    if attempt == max_attempts:
+                        flag_fail = 1
+                        break # break sau max_attempts lần thử 
+                    attempt += 1
+        st.write("Hoàn thành kiểm tra CSDL.")
+        
+        if flag_success == 1:
+            query_copy = copy.deepcopy(result_3["query"])
+            st.write("Câu lệnh & Truy vấn dữ liệu: ", query_copy)
+            st.write("**Phản hồi của Chatbot**: Kết quả như sau")
+            st.dataframe(pd.DataFrame(result_4["result"]))
+        else:
+            query_copy = copy.deepcopy(result_3["query"])
+            st.write("Câu lệnh & Truy vấn dữ liệu: ", query_copy)
+            st.write("**Phản hồi của Chatbot**: Tôi chưa tìm thấy nội dung bạn yêu cầu, bạn có thể làm rõ hơn câu hỏi được không?")
+
+    # VI. Hiển thị:
+    def remove_newlines(text):
+        return text.replace("\n", "")
+
+    st.write("\n Thời gian thực thi: ", time.time() - start_time)
+
+    st.session_state.chat_history.append({"user": user_input, \
+                                                                "bot": "Phản hồi của Chatbot: " + result_3["query"]})
+
+# Hiển thị lịch sử hội thoại
+st.subheader(" Lịch sử hội thoại ")
+for chat in reversed(st.session_state.chat_history):  
+    st.write(f"**Người dùng:** {chat['user']}")
+    st.write(f"**Chatbot:** {chat['bot']}")
+    st.write(f"**---------**")
